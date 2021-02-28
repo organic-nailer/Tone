@@ -42,9 +42,15 @@ class ParserTest {
         val tokenizer = Tokenizer("33 - 4")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
-            "{\"type\":\"Program\",\"loc\":{\"start\":{\"line\":0,\"column\":0},\"end\":{\"line\":0,\"column\":6}},\"body\":[{\"type\":\"ExpressionStatement\",\"loc\":{\"start\":{\"line\":0,\"column\":0},\"end\":{\"line\":0,\"column\":6}},\"expression\":{\"type\":\"BinaryExpression\",\"loc\":{\"start\":{\"line\":-1,\"column\":-1},\"end\":{\"line\":0,\"column\":6}},\"left\":{\"type\":\"Literal\",\"loc\":{\"start\":{\"line\":0,\"column\":0},\"end\":{\"line\":0,\"column\":2}},\"value\":33,\"raw\":\"33\"},\"right\":{\"type\":\"Literal\",\"loc\":{\"start\":{\"line\":0,\"column\":5},\"end\":{\"line\":0,\"column\":6}},\"value\":4,\"raw\":\"4\"},\"operator\":\"-\"}}]}",
+            "{\"type\":\"Program\",\"loc\":{\"start\":{\"line\":0,\"column\":0},\"end\":{\"line\":0,\"column\":6}},\"body\":[{\"type\":\"ExpressionStatement\",\"loc\":{\"start\":{\"line\":0,\"column\":0},\"end\":{\"line\":0,\"column\":6}},\"expression\":{\"type\":\"BinaryExpression\",\"loc\":{\"start\":{\"line\":0,\"column\":0},\"end\":{\"line\":0,\"column\":6}},\"left\":{\"type\":\"Literal\",\"loc\":{\"start\":{\"line\":0,\"column\":0},\"end\":{\"line\":0,\"column\":2}},\"value\":33,\"raw\":\"33\"},\"right\":{\"type\":\"Literal\",\"loc\":{\"start\":{\"line\":0,\"column\":5},\"end\":{\"line\":0,\"column\":6}},\"value\":4,\"raw\":\"4\"},\"operator\":\"-\"}}]}",
             parsed
         )
     }
-}
 
+    @Test
+    fun parseBinaryExpr() {
+        val tokenizer = Tokenizer("1 + 2 * 3 >> 4 & 5 != 6 > 7 instanceof 8")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
+}

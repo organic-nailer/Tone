@@ -88,12 +88,12 @@ class LALR1ParserGenerator(
                 )
             }
         }
-        //printTransitionMap()
+        printTransitionMap()
         for(entry in closureMap) {
             entry.key.filter { r -> r.reducible }.forEach {
                 it.follow.forEach { token ->
                     if(transitionMap.containsKey(entry.value to token)) {
-                        throw Exception("SLR競合2 $entry")
+                        throw Exception("SLR競合2 $token $entry")
                     }
                     transitionMap[entry.value to token] = TransitionData(
                         TransitionKind.REDUCE, null, it.toRule()

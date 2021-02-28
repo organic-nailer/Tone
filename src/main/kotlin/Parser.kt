@@ -17,11 +17,7 @@ class Parser {
             type = NodeType.Program,
             loc = Location(start = Position(0,0), end = preTree.end ?: Position(-1,-1)),
             body = listOf(
-                Node(
-                    type = NodeType.ExpressionStatement,
-                    loc = Location(start = Position(0,0), end = preTree.end ?: Position(-1,-1)),
-                    expression = preTree.toNode()
-                )
+                preTree.toNode()
             )
         )
         val json = Json.encodeToString(node)
@@ -68,7 +64,7 @@ class Parser {
                     } ?: kotlin.run {
                         throw Exception("還元shiftエラー $rule, $stack")
                     }
-                    newNode.start = nodeStack.firstOrNull()?.end
+                    newNode.start = nodeStack.firstOrNull()?.end ?: Position(0,0)
                     nodeStack.addFirst(newNode)
                 }
                 LALR1ParserGenerator.TransitionKind.ACCEPT -> {
@@ -101,7 +97,24 @@ class Parser {
 
         fun toNode(): Node {
             return when(kind) {
-                EcmaGrammar.AdditiveExpression -> {
+                EcmaGrammar.ExpressionStatement -> {
+                    Node(
+                        type = NodeType.ExpressionStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        expression = children[0].toNode()
+                    )
+                }
+                EcmaGrammar.AdditiveExpression,
+                EcmaGrammar.MultiplicativeExpression,
+                EcmaGrammar.ShiftExpression,
+                EcmaGrammar.RelationalExpression,
+                EcmaGrammar.EqualityExpression,
+                EcmaGrammar.BitwiseANDExpression,
+                EcmaGrammar.BitwiseXORExpression,
+                EcmaGrammar.BitwiseORExpression-> {
                     if(children.size >= 2) {
                         Node(
                             type = NodeType.BinaryExpression,

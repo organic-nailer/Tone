@@ -4,6 +4,14 @@ class Tokenizer(input: String) {
     var tokenized = listOf<TokenData>()
     private val reader = CharReader(null, input)
     private var readIndex = 0
+
+    private val operators = listOf(
+        TokenKind.InstanceOf,
+        TokenKind.URightShift, TokenKind.Identity, TokenKind.NoIdentity,
+        TokenKind.LeftShift, TokenKind.RightShift,TokenKind.In,TokenKind.LTE,TokenKind.GTE,TokenKind.Eq,TokenKind.InEq,
+        TokenKind.Plus,TokenKind.Minus,TokenKind.LT,TokenKind.GT,TokenKind.And,TokenKind.Xor,TokenKind.Or,TokenKind.Multi,TokenKind.Remainder,TokenKind.Div
+    )
+
     init {
         tokenize()
     }
@@ -23,13 +31,12 @@ class Tokenizer(input: String) {
                 }
                 continue
             }
-            if(reader.prefixMatch(TokenKind.Plus.str)) {
-                res.add(TokenData(TokenKind.Plus.str, TokenKind.Plus, lineNumber, lineIndex))
-                continue
-            }
-            if(reader.prefixMatch(TokenKind.Minus.str)) {
-                res.add(TokenData(TokenKind.Minus.str, TokenKind.Minus, lineNumber, lineIndex))
-                continue
+            for(operator in operators) {
+                if(reader.prefixMatch(operator.str)) {
+                    res.add(TokenData(operator.str, operator, lineNumber, lineIndex))
+                    reader.index += operator.str.length
+                    continue
+                }
             }
         }
         res.add(TokenData("$", TokenKind.END, reader.lineNumber, reader.index))
@@ -46,7 +53,12 @@ class Tokenizer(input: String) {
 
     enum class TokenKind(val str: String) {
         NumberLiteral("Number"),
-        Plus("+"), Minus("-"),
+        Plus("+"), Minus("-"), Multi("*"), Remainder("%"), Div("/"),
+        LeftShift("<<"), RightShift(">>"), URightShift(">>>"),
+        In("in"), InstanceOf("instanceof"),
+        LT("<"), GT(">"), LTE("<="), GTE(">="),
+        Eq("=="), InEq("!="), Identity("==="), NoIdentity("!=="),
+        And("&"), Xor("^"), Or("|"),
         EOF("EOF"), END("$")
     }
     data class TokenData(
