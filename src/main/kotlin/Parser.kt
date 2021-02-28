@@ -33,11 +33,11 @@ class Parser {
         var accepted = false
         stack.addFirst("J0" to "")
         while(parseIndex < input.size || stack.isNotEmpty()) {
-            println("now: ${stack.first().first} to ${input.getOrNull(parseIndex)?.kind?.str}")
-            val transition = parserGenerator.transitionMap[stack.first().first to input[parseIndex].kind.str]
+            println("now: ${stack.first().first} to ${input.getOrNull(parseIndex)?.kind}")
+            val transition = parserGenerator.transitionMap[stack.first().first to input[parseIndex].kind]
             when(transition?.kind) {
                 LALR1ParserGenerator.TransitionKind.SHIFT -> {
-                    stack.addFirst(transition.value!! to input[parseIndex].kind.str)
+                    stack.addFirst(transition.value!! to input[parseIndex].kind)
                     nodeStack.addFirst(NodeInternal(
                         stack.first().second,
                         input[parseIndex].raw,
@@ -80,6 +80,7 @@ class Parser {
             println("受理されませんでした ${nodeStack.first()}")
             return null
         }
+        println("nodeInternal: ${nodeStack.first()}")
         return nodeStack.first()
     }
 
@@ -106,6 +107,43 @@ class Parser {
                         ),
                         expression = children[0].toNode()
                     )
+                }
+                EcmaGrammar.Expression -> {
+                    children[0].toNode()
+                }
+                EcmaGrammar.AssignmentExpression -> {
+                    if(children.size >= 2) {
+                        Node(
+                            type = NodeType.AssignmentExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            left = children[2].toNode(),
+                            right = children[0].toNode(),
+                            operator = children[1].value
+                        )
+                    }
+                    else {
+                        children[0].toNode()
+                    }
+                }
+                EcmaGrammar.ConditionalExpression -> {
+                    if(children.size >= 3) {
+                        Node(
+                            type = NodeType.ConditionalExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            test = children[2].toNode(),
+                            consequent = children[1].toNode(),
+                            alternate = children[0].toNode()
+                        )
+                    }
+                    else {
+                        children[0].toNode()
+                    }
                 }
                 EcmaGrammar.LogicalANDExpression,
                 EcmaGrammar.LogicalORExpression -> {
@@ -181,6 +219,9 @@ class Parser {
         val expression: Node? = null,
         val left: Node? = null,
         val right: Node? = null,
+        val test: Node? = null,
+        val alternate: Node? = null,
+        val consequent: Node? = null,
         val operator: String? = null,
         val value: Int? = null,
         val raw: String? = null
@@ -188,6 +229,7 @@ class Parser {
     enum class NodeType {
         Program, ExpressionStatement, Literal,
         BinaryExpression, LogicalExpression,
+        ConditionalExpression, AssignmentExpression,
         UNKNOWN
     }
     @Serializable

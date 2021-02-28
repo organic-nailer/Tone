@@ -5,20 +5,26 @@ class Tokenizer(input: String) {
     private val reader = CharReader(null, input)
     private var readIndex = 0
 
-    private val operators = listOf(
-        TokenKind.InstanceOf,
-        TokenKind.URightShift, TokenKind.Identity, TokenKind.NoIdentity,
-
-        TokenKind.LeftShift, TokenKind.RightShift,TokenKind.In,
-        TokenKind.LTE,TokenKind.GTE,TokenKind.Eq,TokenKind.InEq,
-        TokenKind.LogicAnd,TokenKind.LogicOr,
-
-        TokenKind.Plus,TokenKind.Minus,TokenKind.LT,TokenKind.GT,
-        TokenKind.And,TokenKind.Xor,TokenKind.Or,TokenKind.Multi,
-        TokenKind.Remainder,TokenKind.Div
+    private val binaryOperators = setOf(
+        "==","!=","===","!==","<","<=",">",">=",
+        "<<",">>",">>>","+","-","*","/","%","|",
+        "^","&","in","instanceof"
     )
+    private val assignmentOperators = setOf(
+        "=","+=","-=","*=","/=","%=","<<=",">>=",
+        ">>>=","|=","^=","&="
+    )
+    private val conditionalOperators = setOf(
+        "?", ":"
+    )
+    private val operators = mutableListOf<String>()
 
     init {
+        operators.clear()
+        operators.addAll(binaryOperators)
+        operators.addAll(assignmentOperators)
+        operators.addAll(conditionalOperators)
+        operators.sortDescending()
         tokenize()
     }
 
@@ -33,44 +39,40 @@ class Tokenizer(input: String) {
             if(next.isDigit()) {
                 val d = reader.readNumber()
                 if(d != null) {
-                    res.add(TokenData(d, TokenKind.NumberLiteral, lineNumber, lineIndex))
+                    res.add(TokenData(d, EcmaGrammar.Number, lineNumber, lineIndex))
                 }
                 continue
             }
             for(operator in operators) {
-                if(reader.prefixMatch(operator.str)) {
-                    res.add(TokenData(operator.str, operator, lineNumber, lineIndex))
-                    reader.index += operator.str.length
-                    continue
+                if(reader.prefixMatch(operator)) {
+                    if(assignmentOperators.contains(operator)) {
+                        res.add(TokenData(operator, EcmaGrammar.AssignmentOperator, lineNumber, lineIndex))
+                        reader.index += operator.length
+                        continue
+                    }
+                    else {
+                        res.add(TokenData(operator, operator, lineNumber, lineIndex))
+                        reader.index += operator.length
+                        continue
+                    }
                 }
             }
         }
-        res.add(TokenData("$", TokenKind.END, reader.lineNumber, reader.index))
+        res.add(TokenData("$", "$", reader.lineNumber, reader.index))
         readIndex = 0
         tokenized = res
     }
 
     fun getNextToken(): TokenData {
         if(tokenized.size <= readIndex) {
-            return TokenData("", TokenKind.EOF, reader.lineNumber, reader.index)
+            return TokenData("", "EOF", reader.lineNumber, reader.index)
         }
         return tokenized[readIndex++]
     }
 
-    enum class TokenKind(val str: String) {
-        NumberLiteral("Number"),
-        Plus("+"), Minus("-"), Multi("*"), Remainder("%"), Div("/"),
-        LeftShift("<<"), RightShift(">>"), URightShift(">>>"),
-        In("in"), InstanceOf("instanceof"),
-        LT("<"), GT(">"), LTE("<="), GTE(">="),
-        Eq("=="), InEq("!="), Identity("==="), NoIdentity("!=="),
-        And("&"), Xor("^"), Or("|"),
-        LogicAnd("&&"), LogicOr("||"),
-        EOF("EOF"), END("$")
-    }
     data class TokenData(
         val raw: String,
-        val kind: TokenKind,
+        val kind: String,
         val startLine: Int,
         val startIndex: Int
     )

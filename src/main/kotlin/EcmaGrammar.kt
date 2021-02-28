@@ -11,7 +11,12 @@ object EcmaGrammar {
     const val BitwiseORExpression = "BitwiseORExpression"
     const val LogicalANDExpression = "LogicalANDExpression"
     const val LogicalORExpression = "LogicalORExpression"
+    const val ConditionalExpression = "ConditionalExpression"
+    const val AssignmentExpression = "AssignmentExpression"
+    //const val LeftHandSideExpression = "LeftHandSideExpression"
     const val ExpressionStatement = "ExpressionStatement"
+    const val Expression = "Expression"
+    const val AssignmentOperator = "AssignmentOperator"
     const val Number = "Number"
     private const val OR = "|/"
 
@@ -49,7 +54,13 @@ object EcmaGrammar {
             " $OR $LogicalANDExpression && $BitwiseORExpression",
         "$LogicalORExpression ::= $LogicalANDExpression" +
             " $OR $LogicalORExpression || $LogicalANDExpression",
-        "$ExpressionStatement ::= $LogicalORExpression"
+        "$ConditionalExpression ::= $LogicalORExpression" +
+            " $OR $LogicalORExpression ? $AssignmentExpression : $AssignmentExpression",
+        "$AssignmentExpression ::= $ConditionalExpression" +
+            " $OR $Number $AssignmentOperator $AssignmentExpression",
+        "$Expression ::= $AssignmentExpression" +
+            " $OR $Expression , $AssignmentExpression",
+        "$ExpressionStatement ::= $Expression"
     )
     val es5StartSymbol = ExpressionStatement
 
