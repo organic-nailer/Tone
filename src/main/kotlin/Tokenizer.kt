@@ -8,8 +8,14 @@ class Tokenizer(input: String) {
     private val operators = listOf(
         TokenKind.InstanceOf,
         TokenKind.URightShift, TokenKind.Identity, TokenKind.NoIdentity,
-        TokenKind.LeftShift, TokenKind.RightShift,TokenKind.In,TokenKind.LTE,TokenKind.GTE,TokenKind.Eq,TokenKind.InEq,
-        TokenKind.Plus,TokenKind.Minus,TokenKind.LT,TokenKind.GT,TokenKind.And,TokenKind.Xor,TokenKind.Or,TokenKind.Multi,TokenKind.Remainder,TokenKind.Div
+
+        TokenKind.LeftShift, TokenKind.RightShift,TokenKind.In,
+        TokenKind.LTE,TokenKind.GTE,TokenKind.Eq,TokenKind.InEq,
+        TokenKind.LogicAnd,TokenKind.LogicOr,
+
+        TokenKind.Plus,TokenKind.Minus,TokenKind.LT,TokenKind.GT,
+        TokenKind.And,TokenKind.Xor,TokenKind.Or,TokenKind.Multi,
+        TokenKind.Remainder,TokenKind.Div
     )
 
     init {
@@ -59,6 +65,7 @@ class Tokenizer(input: String) {
         LT("<"), GT(">"), LTE("<="), GTE(">="),
         Eq("=="), InEq("!="), Identity("==="), NoIdentity("!=="),
         And("&"), Xor("^"), Or("|"),
+        LogicAnd("&&"), LogicOr("||"),
         EOF("EOF"), END("$")
     }
     data class TokenData(

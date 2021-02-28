@@ -53,4 +53,11 @@ class ParserTest {
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseLogicExpr() {
+        val tokenizer = Tokenizer("1 + 2 && 3")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
 }

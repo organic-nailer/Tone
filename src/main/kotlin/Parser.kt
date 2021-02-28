@@ -107,6 +107,24 @@ class Parser {
                         expression = children[0].toNode()
                     )
                 }
+                EcmaGrammar.LogicalANDExpression,
+                EcmaGrammar.LogicalORExpression -> {
+                    if(children.size >= 2) {
+                        Node(
+                            type = NodeType.LogicalExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            left = children[2].toNode(),
+                            right = children[0].toNode(),
+                            operator = children[1].value
+                        )
+                    }
+                    else {
+                        children[0].toNode()
+                    }
+                }
                 EcmaGrammar.AdditiveExpression,
                 EcmaGrammar.MultiplicativeExpression,
                 EcmaGrammar.ShiftExpression,
@@ -168,7 +186,9 @@ class Parser {
         val raw: String? = null
     )
     enum class NodeType {
-        Program, ExpressionStatement, Literal, BinaryExpression, UNKNOWN
+        Program, ExpressionStatement, Literal,
+        BinaryExpression, LogicalExpression,
+        UNKNOWN
     }
     @Serializable
     data class Location(

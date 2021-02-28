@@ -30,7 +30,7 @@ class LALR1ParserGenerator(
         calcLALR1Map()
         calcTransition()
         printClosureMap()
-        printGotoMap()
+        //printGotoMap()
         printTransitionMap()
     }
 
@@ -88,7 +88,7 @@ class LALR1ParserGenerator(
                 )
             }
         }
-        printTransitionMap()
+        //printTransitionMap()
         for(entry in closureMap) {
             entry.key.filter { r -> r.reducible }.forEach {
                 it.follow.forEach { token ->
@@ -208,7 +208,7 @@ class LR1ParserGenerator(
     }
 
     private fun calcTokenKind() {
-        println("CalcTokenKind")
+        //println("CalcTokenKind")
         terminalTokens.clear()
         nonTerminalTokens.clear()
         nonTerminalTokens.addAll(rules.map { r -> r.left }.distinct())
@@ -220,8 +220,8 @@ class LR1ParserGenerator(
             }
         }
         terminalTokens.remove(EMPTY)
-        println("T=$terminalTokens")
-        println("N=$nonTerminalTokens")
+        //println("T=$terminalTokens")
+        //println("N=$nonTerminalTokens")
     }
 
     private fun getFirst(value: List<String>): Set<String> {
@@ -264,7 +264,7 @@ class LR1ParserGenerator(
         input: Set<LR1ProductionRuleData>,
         grammarRules: List<ProductionRuleData> = rules
     ): Set<LR1ProductionRuleData> {
-        println("getClosure: $input")
+        //println("getClosure: $input")
         val result = input.toMutableSet()
         var updated = true
         while(updated) {
@@ -283,7 +283,7 @@ class LR1ParserGenerator(
                 }
             }
         }
-        println("result: $result")
+        //println("result: $result")
         return result
     }
 
@@ -326,7 +326,7 @@ class LR1ParserGenerator(
         token: String,
         grammarRules: List<ProductionRuleData> = rules
     ): Set<LR1ProductionRuleData> {
-        println("GetGoto: $input, $token")
+        //println("GetGoto: $input, $token")
         return getClosure(
             input
                 .filter { r -> !r.reducible && r.right[r.index] == token }
