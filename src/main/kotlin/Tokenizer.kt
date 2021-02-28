@@ -17,6 +17,9 @@ class Tokenizer(input: String) {
     private val conditionalOperators = setOf(
         "?", ":"
     )
+    private val unaryOperators = setOf(
+        "-","+","!","~","typeof","void","delete","++","--"
+    )
     private val operators = mutableListOf<String>()
 
     init {
@@ -24,6 +27,7 @@ class Tokenizer(input: String) {
         operators.addAll(binaryOperators)
         operators.addAll(assignmentOperators)
         operators.addAll(conditionalOperators)
+        operators.addAll(unaryOperators)
         operators.sortDescending()
         tokenize()
     }

@@ -187,6 +187,53 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.UnaryExpression -> {
+                    if(children.size >= 2) {
+                        if(children[0].value == "++" || children[0].value == "--") {
+                            Node(
+                                type = NodeType.UpdateExpression,
+                                loc = Location(
+                                    start = this.start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                prefix = true,
+                                argument = children[0].toNode(),
+                                operator = children[1].value
+                            )
+                        }
+                        else {
+                            Node(
+                                type = NodeType.UnaryExpression,
+                                loc = Location(
+                                    start = this.start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                argument = children[0].toNode(),
+                                operator = children[1].value
+                            )
+                        }
+                    }
+                    else {
+                        children[0].toNode()
+                    }
+                }
+                EcmaGrammar.PostfixExpression -> {
+                    if(children.size >= 2) {
+                        Node(
+                            type = NodeType.UpdateExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            prefix = false,
+                            argument = children[1].toNode(),
+                            operator = children[0].value
+                        )
+                    }
+                    else {
+                        children[0].toNode()
+                    }
+                }
                 EcmaGrammar.Number -> {
                     Node(
                         type = NodeType.Literal,
@@ -222,6 +269,8 @@ class Parser {
         val test: Node? = null,
         val alternate: Node? = null,
         val consequent: Node? = null,
+        val argument: Node? = null,
+        val prefix: Boolean? = null,
         val operator: String? = null,
         val value: Int? = null,
         val raw: String? = null
@@ -230,6 +279,7 @@ class Parser {
         Program, ExpressionStatement, Literal,
         BinaryExpression, LogicalExpression,
         ConditionalExpression, AssignmentExpression,
+        UnaryExpression, UpdateExpression,
         UNKNOWN
     }
     @Serializable

@@ -60,4 +60,11 @@ class ParserTest {
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseUnary() {
+        val tokenizer = Tokenizer("+ 1 + 2 ++")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
 }

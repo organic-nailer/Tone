@@ -14,6 +14,8 @@ object EcmaGrammar {
     const val ConditionalExpression = "ConditionalExpression"
     const val AssignmentExpression = "AssignmentExpression"
     //const val LeftHandSideExpression = "LeftHandSideExpression"
+    const val UnaryExpression = "UnaryExpression"
+    const val PostfixExpression = "PostfixExpression"
     const val ExpressionStatement = "ExpressionStatement"
     const val Expression = "Expression"
     const val AssignmentOperator = "AssignmentOperator"
@@ -21,10 +23,23 @@ object EcmaGrammar {
     private const val OR = "|/"
 
     val es5Grammar = listOf(
-        "$MultiplicativeExpression ::= $Number" +
-            " $OR $MultiplicativeExpression * $Number" +
-            " $OR $MultiplicativeExpression / $Number" +
-            " $OR $MultiplicativeExpression % $Number",
+        "$PostfixExpression ::= $Number" +
+            " $OR $Number ++" +
+            " $OR $Number --",
+        "$UnaryExpression ::= $PostfixExpression" +
+            " $OR delete $UnaryExpression" +
+            " $OR void $UnaryExpression" +
+            " $OR typeof $UnaryExpression" +
+            " $OR ++ $UnaryExpression" +
+            " $OR -- $UnaryExpression" +
+            " $OR + $UnaryExpression" +
+            " $OR - $UnaryExpression" +
+            " $OR ~ $UnaryExpression" +
+            " $OR ! $UnaryExpression",
+        "$MultiplicativeExpression ::= $UnaryExpression" +
+            " $OR $MultiplicativeExpression * $UnaryExpression" +
+            " $OR $MultiplicativeExpression / $UnaryExpression" +
+            " $OR $MultiplicativeExpression % $UnaryExpression",
         "$AdditiveExpression ::= $MultiplicativeExpression" +
             " $OR $AdditiveExpression + $MultiplicativeExpression" +
             " $OR $AdditiveExpression - $MultiplicativeExpression",
