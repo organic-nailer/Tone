@@ -10,8 +10,9 @@ class Parser {
         EcmaGrammar.es5StartSymbol
     )
 
-    fun parse(input: List<Tokenizer.TokenData>) {
-        val preTree = parseInternal(input) ?: return
+    fun parse(input: List<Tokenizer.TokenData>): String? {
+        val preTree = parseInternal(input) ?: return null
+
         val node = Node(
             type = NodeType.Program,
             loc = Location(start = Position(0,0), end = preTree.end ?: Position(-1,-1)),
@@ -25,6 +26,7 @@ class Parser {
         )
         val json = Json.encodeToString(node)
         println(json)
+        return json
     }
 
     private fun parseInternal(input: List<Tokenizer.TokenData>): NodeInternal? {
@@ -99,7 +101,7 @@ class Parser {
 
         fun toNode(): Node {
             return when(kind) {
-                "AddExpression" -> {
+                EcmaGrammar.AdditiveExpression -> {
                     if(children.size >= 2) {
                         Node(
                             type = NodeType.BinaryExpression,
@@ -109,14 +111,14 @@ class Parser {
                             ),
                             left = children[2].toNode(),
                             right = children[0].toNode(),
-                            operator = Tokenizer.TokenKind.Plus.str
+                            operator = children[1].value
                         )
                     }
                     else {
                         children[0].toNode()
                     }
                 }
-                "Number" -> {
+                EcmaGrammar.Number -> {
                     Node(
                         type = NodeType.Literal,
                         loc = Location(

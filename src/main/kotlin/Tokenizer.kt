@@ -27,6 +27,10 @@ class Tokenizer(input: String) {
                 res.add(TokenData(TokenKind.Plus.str, TokenKind.Plus, lineNumber, lineIndex))
                 continue
             }
+            if(reader.prefixMatch(TokenKind.Minus.str)) {
+                res.add(TokenData(TokenKind.Minus.str, TokenKind.Minus, lineNumber, lineIndex))
+                continue
+            }
         }
         res.add(TokenData("$", TokenKind.END, reader.lineNumber, reader.index))
         readIndex = 0
@@ -41,7 +45,9 @@ class Tokenizer(input: String) {
     }
 
     enum class TokenKind(val str: String) {
-        NumberLiteral("Number"), Plus("+"), EOF("EOF"), END("$")
+        NumberLiteral("Number"),
+        Plus("+"), Minus("-"),
+        EOF("EOF"), END("$")
     }
     data class TokenData(
         val raw: String,
