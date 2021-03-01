@@ -67,4 +67,18 @@ class ParserTest {
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseNull() {
+        val tokenizer = Tokenizer("1 = null")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
+
+    @Test
+    fun parseBool() {
+        val tokenizer = Tokenizer("1 = new true")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
 }

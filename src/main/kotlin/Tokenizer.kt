@@ -18,7 +18,10 @@ class Tokenizer(input: String) {
         "?", ":"
     )
     private val unaryOperators = setOf(
-        "-","+","!","~","typeof","void","delete","++","--"
+        "-","+","!","~","typeof","void","delete","++","--","new"
+    )
+    private val keywords = setOf(
+        "this"
     )
     private val operators = mutableListOf<String>()
 
@@ -28,6 +31,7 @@ class Tokenizer(input: String) {
         operators.addAll(assignmentOperators)
         operators.addAll(conditionalOperators)
         operators.addAll(unaryOperators)
+        operators.addAll(keywords)
         operators.sortDescending()
         tokenize()
     }
@@ -43,8 +47,23 @@ class Tokenizer(input: String) {
             if(next.isDigit()) {
                 val d = reader.readNumber()
                 if(d != null) {
-                    res.add(TokenData(d, EcmaGrammar.Number, lineNumber, lineIndex))
+                    res.add(TokenData(d, EcmaGrammar.NumericLiteral, lineNumber, lineIndex))
                 }
+                continue
+            }
+            if(reader.prefixMatch("true")) {
+                res.add(TokenData("true",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
+                reader.index += 4
+                continue
+            }
+            if(reader.prefixMatch("false")) {
+                res.add(TokenData("false",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
+                reader.index += 5
+                continue
+            }
+            if(reader.prefixMatch("null")) {
+                res.add(TokenData("null",EcmaGrammar.NullLiteral, lineNumber,lineIndex))
+                reader.index += 4
                 continue
             }
             for(operator in operators) {

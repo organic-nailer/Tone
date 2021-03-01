@@ -13,19 +13,35 @@ object EcmaGrammar {
     const val LogicalORExpression = "LogicalORExpression"
     const val ConditionalExpression = "ConditionalExpression"
     const val AssignmentExpression = "AssignmentExpression"
-    //const val LeftHandSideExpression = "LeftHandSideExpression"
+    const val LeftHandSideExpression = "LeftHandSideExpression"
+    const val NewExpression = "NewExpression"
+    const val MemberExpression = "MemberExpression"
+    const val PrimaryExpression = "PrimaryExpression"
     const val UnaryExpression = "UnaryExpression"
     const val PostfixExpression = "PostfixExpression"
     const val ExpressionStatement = "ExpressionStatement"
     const val Expression = "Expression"
     const val AssignmentOperator = "AssignmentOperator"
-    const val Number = "Number"
+    const val Literal = "Literal"
+    const val NumericLiteral = "NumericLiteral"
+    const val BooleanLiteral = "BooleanLiteral"
+    const val NullLiteral = "NullLiteral"
+    const val ThisLiteral = "this"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
-        "$PostfixExpression ::= $Number" +
-            " $OR $Number ++" +
-            " $OR $Number --",
+        "$Literal ::= $NullLiteral" +
+            " $OR $BooleanLiteral" +
+            " $OR $NumericLiteral",
+        "$PrimaryExpression ::= $ThisLiteral" +
+            " $OR $Literal",
+        "$MemberExpression ::= $PrimaryExpression",
+        "$NewExpression ::= $MemberExpression" +
+            " $OR new $NewExpression",
+        "$LeftHandSideExpression ::= $NewExpression",
+        "$PostfixExpression ::= $LeftHandSideExpression" +
+            " $OR $LeftHandSideExpression ++" +
+            " $OR $LeftHandSideExpression --",
         "$UnaryExpression ::= $PostfixExpression" +
             " $OR delete $UnaryExpression" +
             " $OR void $UnaryExpression" +
@@ -72,7 +88,7 @@ object EcmaGrammar {
         "$ConditionalExpression ::= $LogicalORExpression" +
             " $OR $LogicalORExpression ? $AssignmentExpression : $AssignmentExpression",
         "$AssignmentExpression ::= $ConditionalExpression" +
-            " $OR $Number $AssignmentOperator $AssignmentExpression",
+            " $OR $NumericLiteral $AssignmentOperator $AssignmentExpression",
         "$Expression ::= $AssignmentExpression" +
             " $OR $Expression , $AssignmentExpression",
         "$ExpressionStatement ::= $Expression"

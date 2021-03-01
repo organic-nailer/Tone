@@ -1,8 +1,17 @@
 package esTree
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
 class Parser {
     private val parserGenerator = LALR1ParserGenerator(
@@ -108,6 +117,10 @@ class Parser {
                         expression = children[0].toNode()
                     )
                 }
+                EcmaGrammar.Literal,
+                EcmaGrammar.PrimaryExpression,
+                EcmaGrammar.MemberExpression,
+                EcmaGrammar.LeftHandSideExpression,
                 EcmaGrammar.Expression -> {
                     children[0].toNode()
                 }
@@ -234,14 +247,61 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.Number -> {
+                EcmaGrammar.NewExpression -> {
+                    if(children.size >= 2) {
+                        Node(
+                            type = NodeType.NewExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            callee = children[0].toNode(),
+                            arguments = listOf()
+                        )
+                    }
+                    else {
+                        children[0].toNode()
+                    }
+                }
+                EcmaGrammar.ThisLiteral -> {
+                    Node(
+                        type = NodeType.ThisExpression,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                    )
+                }
+                EcmaGrammar.NumericLiteral -> {
                     Node(
                         type = NodeType.Literal,
                         loc = Location(
                             start = this.start ?: Position(-1,-1),
                             end = this.end ?: Position(-1,-1)
                         ),
-                        value = this.value?.toIntOrNull(),
+                        value = this.value?.toIntOrNull()?.toString(),
+                        raw = this.value
+                    )
+                }
+                EcmaGrammar.NullLiteral -> {
+                    Node(
+                        type = NodeType.Literal,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        value = null,
+                        raw = this.value
+                    )
+                }
+                EcmaGrammar.BooleanLiteral -> {
+                    Node(
+                        type = NodeType.Literal,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        value = (this.value == "true").toString(),
                         raw = this.value
                     )
                 }
@@ -271,8 +331,10 @@ class Parser {
         val consequent: Node? = null,
         val argument: Node? = null,
         val prefix: Boolean? = null,
+        val arguments: List<Node>? = null,
+        val callee: Node? = null,
         val operator: String? = null,
-        val value: Int? = null,
+        val value: String? = null, //変換したものをStringで出力
         val raw: String? = null
     )
     enum class NodeType {
@@ -280,6 +342,7 @@ class Parser {
         BinaryExpression, LogicalExpression,
         ConditionalExpression, AssignmentExpression,
         UnaryExpression, UpdateExpression,
+        NewExpression, ThisExpression,
         UNKNOWN
     }
     @Serializable
