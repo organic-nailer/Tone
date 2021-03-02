@@ -1,0 +1,8 @@
+@babel/eslint-parserから生成
+^\s*\"range\": \[\n.*\n.*\n.*\n ->
+^\s*\"comments\": \[],\n ->
+^\s*\"sourceType\".*\n ->
+^\s*\"optional\".*\n ->
+^\s*\"(start|end)\": \d*,\n ->
+\"value\": (.*), -> "value": "$1",
+,(\n\s*}) -> $1

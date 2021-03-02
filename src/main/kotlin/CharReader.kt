@@ -18,7 +18,7 @@ class CharReader(
     private var line = ""
     private var lineLength = 0
     var index = 0
-    var lineNumber = -1
+    var lineNumber = 0
 
     fun getNextChar(): Char {
         if(index + 1 < lineLength) {

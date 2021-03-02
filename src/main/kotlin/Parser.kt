@@ -47,10 +47,12 @@ class Parser {
                 LALR1ParserGenerator.TransitionKind.REDUCE -> {
                     val rule = transition.rule!!
                     val newNode = NodeInternal(rule.left, null, mutableListOf(), null, nodeStack.first().end)
+                    var startStack = nodeStack.first()
                     for(t in rule.right.reversed()) {
                         if(stack.first().second == t) {
                             stack.removeFirst()
-                            newNode.children.add(nodeStack.removeFirst())
+                            startStack = nodeStack.removeFirst()
+                            newNode.children.add(startStack)
                         }
                         else {
                             throw Exception("還元時エラー $rule, $stack, $t")
@@ -61,7 +63,7 @@ class Parser {
                     } ?: kotlin.run {
                         throw Exception("還元shiftエラー $rule, $stack")
                     }
-                    newNode.start = nodeStack.firstOrNull()?.end ?: Position(0,0)
+                    newNode.start = startStack.start ?: Position(1,0)
                     nodeStack.addFirst(newNode)
                 }
                 LALR1ParserGenerator.TransitionKind.ACCEPT -> {
@@ -185,15 +187,15 @@ class Parser {
                     }
                 }
                 EcmaGrammar.ConditionalExpression -> {
-                    if(children.size >= 3) {
+                    if(children.size == 5) {
                         Node(
                             type = NodeType.ConditionalExpression,
                             loc = Location(
                                 start = this.start ?: Position(-1,-1),
                                 end = this.end ?: Position(-1,-1)
                             ),
-                            test = children[2].toNode(),
-                            consequent = children[1].toNode(),
+                            test = children[4].toNode(),
+                            consequent = children[2].toNode(),
                             alternate = children[0].toNode()
                         )
                     }
@@ -332,19 +334,38 @@ class Parser {
                         )
                     }
                     else {
-                        val argList = if(children[0].children.size == 2) null else children[0].children[1]
-                        Node(
-                            type = NodeType.CallExpression,
-                            loc = Location(
-                                start = this.start ?: Position(-1,-1),
-                                end = this.end ?: Position(-1,-1)
-                            ),
-                            callee = children[1].toNode(),
-                            arguments = argList?.children
-                                ?.filter { a -> a.value != "," }
-                                ?.map { a -> a.toNode() }
-                                ?.asReversed()
-                        )
+                        if(children[0].children.size == 2) {
+                            Node(
+                                type = NodeType.CallExpression,
+                                loc = Location(
+                                    start = this.start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                callee = children[1].toNode(),
+                                arguments = listOf()
+                            )
+                        }
+                        else {
+                            val argList = mutableListOf<Node>()
+                            var node = children[0].children[1]
+                            while(true) {
+                                if(node.children.size == 1) {
+                                    argList.add(0,node.children[0].toNode())
+                                    break
+                                }
+                                argList.add(0,node.children[0].toNode())
+                                node = node.children[2]
+                            }
+                            Node(
+                                type = NodeType.CallExpression,
+                                loc = Location(
+                                    start = this.start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                callee = children[1].toNode(),
+                                arguments = argList
+                            )
+                        }
                     }
                 }
                 EcmaGrammar.MemberExpression -> {
@@ -361,19 +382,38 @@ class Parser {
                         )
                     }
                     else if(children.size == 3 && children[2].value == "new") {
-                        val argList = if(children[0].children.size == 2) null else children[0].children[1]
-                        Node(
-                            type = NodeType.NewExpression,
-                            loc = Location(
-                                start = this.start ?: Position(-1,-1),
-                                end = this.end ?: Position(-1,-1)
-                            ),
-                            callee = children[2].toNode(),
-                            arguments = argList?.children
-                                ?.filter { a -> a.value != "," }
-                                ?.map { a -> a.toNode() }
-                                ?.asReversed()
-                        )
+                        if(children[0].children.size == 2) {
+                            Node(
+                                type = NodeType.NewExpression,
+                                loc = Location(
+                                    start = this.start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                callee = children[1].toNode(),
+                                arguments = listOf()
+                            )
+                        }
+                        else {
+                            val argList = mutableListOf<Node>()
+                            var node = children[0].children[1]
+                            while(true) {
+                                if(node.children.size == 1) {
+                                    argList.add(0,node.children[0].toNode())
+                                    break
+                                }
+                                argList.add(0,node.children[0].toNode())
+                                node = node.children[2]
+                            }
+                            Node(
+                                type = NodeType.NewExpression,
+                                loc = Location(
+                                    start = this.start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                callee = children[1].toNode(),
+                                arguments = argList
+                            )
+                        }
                     }
                     else if(children.size == 3) {
                         Node(

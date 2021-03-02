@@ -1,5 +1,11 @@
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.flipkart.zjsonpatch.JsonDiff
 import esTree.Parser
 import esTree.Tokenizer
+import kotlinx.serialization.json.Json
+import java.io.BufferedReader
+import java.io.File
+import java.io.Reader
 import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.Test
@@ -118,5 +124,53 @@ class ParserTest {
         val tokenizer = Tokenizer("{x=2;}")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
+    }
+
+    @Test
+    fun importFileTest() {
+        val file = (ParserTest::class.java).classLoader.getResource("Hoge.js") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        val text = File(file.toURI()).readText()
+        assertEquals("hogehoge = 2;",text)
+
+        val jsonFile = (ParserTest::class.java).classLoader.getResource("HogeExpected.json") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        val expected = File(jsonFile.toURI()).readText()
+        val tokenizer = Tokenizer("hogehoge = 2;")
+        val parsed = parser.parse(tokenizer.tokenized) ?: ""
+        val patch = JsonDiff.asJson(
+            jacksonObjectMapper().readTree(expected),
+            jacksonObjectMapper().readTree(parsed)
+        )
+        assertEquals("[]",patch.toString())
+    }
+
+    @Test
+    fun expressionTest() {
+        val file = (ParserTest::class.java).classLoader.getResource("ExpressionTest.js") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        val text = File(file.toURI()).readText()
+        val tokenizer = Tokenizer(text)
+        val parsed = parser.parse(tokenizer.tokenized) ?: ""
+
+        val jsonFile = (ParserTest::class.java).classLoader.getResource("ExpressionTestExpected.json") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        val element = Json.parseToJsonElement(File(jsonFile.toURI()).readText())
+        assertJson(
+            File(jsonFile.toURI()).readText(),
+            parsed
+        )
+    }
+
+    private fun assertJson(expected: String, actual: String) {
+        val patch = JsonDiff.asJson(
+            jacksonObjectMapper().readTree(expected),
+            jacksonObjectMapper().readTree(actual)
+        )
+        assertEquals("[]",patch.toString())
     }
 }

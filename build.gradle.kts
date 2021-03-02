@@ -17,6 +17,8 @@ repositories {
 dependencies {
     testImplementation(kotlin("test-junit"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.1.0")
+    implementation("com.flipkart.zjsonpatch:zjsonpatch:0.4.11")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.0")
 }
 
 tasks.test {
