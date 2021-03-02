@@ -3,6 +3,7 @@ package esTree
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.system.measureTimeMillis
 
 class Parser {
     private val parserGenerator = LALR1ParserGenerator(
@@ -11,9 +12,11 @@ class Parser {
     )
 
     fun parse(input: List<Tokenizer.TokenData>): String? {
-        val preTree = parseInternal(input) ?: return null
-
-        val node = preTree.toNode()
+        var node: Node? = null
+        measureTimeMillis {
+            val preTree = parseInternal(input) ?: return null
+            node = preTree.toNode()
+        }.run { println("Parsed in $this ms") }
         val json = Json.encodeToString(node)
         println(json)
         return json
@@ -75,7 +78,7 @@ class Parser {
             return null
         }
         println("nodeInternal: ")
-        nodeStack.first().print("")
+        //nodeStack.first().print("")
         return nodeStack.first()
     }
 

@@ -1,6 +1,7 @@
 package esTree
 
 import java.lang.Exception
+import kotlin.system.measureTimeMillis
 
 class LALR1ParserGenerator(
     rules: List<LR1ParserGenerator.ProductionRuleData>,
@@ -27,8 +28,10 @@ class LALR1ParserGenerator(
     }
 
     init {
-        calcLALR1Map()
-        calcTransition()
+        measureTimeMillis {
+            calcLALR1Map()
+            calcTransition()
+        }.run { println("Generated in $this ms") }
         printClosureMap()
         //printGotoMap()
         printTransitionMap()
