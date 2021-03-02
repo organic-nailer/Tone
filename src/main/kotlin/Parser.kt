@@ -265,6 +265,18 @@ class Parser {
                             computed = true,
                         )
                     }
+                    else if(children.size == 3) {
+                        Node(
+                            type = NodeType.MemberExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            `object` = children[2].toNode(),
+                            property = children[0].toNode(),
+                            computed = false
+                        )
+                    }
                     else {
                         val argList = if(children[0].children.size == 2) null else children[0].children[1]
                         Node(
@@ -291,9 +303,10 @@ class Parser {
                             ),
                             `object` = children[3].toNode(),
                             property = children[1].toNode(),
+                            computed = true
                         )
                     }
-                    else if(children.size == 3) {
+                    else if(children.size == 3 && children[2].value == "new") {
                         val argList = if(children[0].children.size == 2) null else children[0].children[1]
                         Node(
                             type = NodeType.NewExpression,
@@ -306,6 +319,18 @@ class Parser {
                                 ?.filter { a -> a.value != "," }
                                 ?.map { a -> a.toNode() }
                                 ?.asReversed()
+                        )
+                    }
+                    else if(children.size == 3) {
+                        Node(
+                            type = NodeType.MemberExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            `object` = children[2].toNode(),
+                            property = children[0].toNode(),
+                            computed = false
                         )
                     }
                     else {
@@ -327,6 +352,16 @@ class Parser {
                             start = this.start ?: Position(-1,-1),
                             end = this.end ?: Position(-1,-1)
                         ),
+                    )
+                }
+                EcmaGrammar.Identifier -> {
+                    Node(
+                        type = NodeType.Identifier,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        name = this.value
                     )
                 }
                 EcmaGrammar.NumericLiteral -> {
@@ -395,6 +430,7 @@ class Parser {
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
+        val name: String? = null,
         val raw: String? = null
     )
     enum class NodeType {
@@ -404,6 +440,7 @@ class Parser {
         UnaryExpression, UpdateExpression,
         NewExpression, ThisExpression,
         CallExpression, MemberExpression,
+        Identifier,
         UNKNOWN
     }
     @Serializable

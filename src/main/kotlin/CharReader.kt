@@ -56,4 +56,11 @@ class CharReader(
         index--
         return line.substring(currentIndex..index)
     }
+
+    private val identifierPattern = Regex("""^[A-Za-z\$\_][A-Za-z0-9\$\_]*""")
+    fun readIdentifier(): String? {
+        val match = identifierPattern.find(line.substring(index)) ?: return null
+        index += match.value.length - 1
+        return match.value
+    }
 }

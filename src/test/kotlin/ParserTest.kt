@@ -88,4 +88,11 @@ class ParserTest {
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseIdentifier() {
+        val tokenizer = Tokenizer("hello.world=334")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
 }

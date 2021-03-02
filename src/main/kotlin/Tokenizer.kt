@@ -5,33 +5,25 @@ class Tokenizer(input: String) {
     private val reader = CharReader(null, input)
     private var readIndex = 0
 
-    private val binaryOperators = setOf(
+    private val anonymousOperators = setOf(
         "==","!=","===","!==","<","<=",">",">=",
         "<<",">>",">>>","+","-","*","/","%","|",
-        "^","&","in","instanceof"
+        "^","&",
+        "?", ":","!","~","++","--","(",")","[","]","."
     )
     private val assignmentOperators = setOf(
         "=","+=","-=","*=","/=","%=","<<=",">>=",
         ">>>=","|=","^=","&="
     )
-    private val conditionalOperators = setOf(
-        "?", ":"
-    )
-    private val unaryOperators = setOf(
-        "-","+","!","~","typeof","void","delete","++","--","new"
-    )
     private val keywords = setOf(
-        "this","(",")","[","]"
+        "this","in","instanceof","typeof","void","delete","new"
     )
     private val operators = mutableListOf<String>()
 
     init {
         operators.clear()
-        operators.addAll(binaryOperators)
+        operators.addAll(anonymousOperators)
         operators.addAll(assignmentOperators)
-        operators.addAll(conditionalOperators)
-        operators.addAll(unaryOperators)
-        operators.addAll(keywords)
         operators.distinct()
         operators.sortDescending()
         tokenize()
@@ -45,6 +37,7 @@ class Tokenizer(input: String) {
             if(next.isWhitespace()) continue
             val lineNumber = reader.lineNumber
             val lineIndex = reader.index
+            //println("now $next $lineIndex")
             if(next.isDigit()) {
                 val d = reader.readNumber()
                 if(d != null) {
@@ -52,19 +45,26 @@ class Tokenizer(input: String) {
                 }
                 continue
             }
-            if(reader.prefixMatch("true")) {
-                res.add(TokenData("true",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
-                reader.index += 4-1
-                continue
-            }
-            if(reader.prefixMatch("false")) {
-                res.add(TokenData("false",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
-                reader.index += 5-1
-                continue
-            }
-            if(reader.prefixMatch("null")) {
-                res.add(TokenData("null",EcmaGrammar.NullLiteral, lineNumber,lineIndex))
-                reader.index += 4-1
+            val identifier = reader.readIdentifier()
+            //println("readId=$identifier next=${reader.index}")
+            if(identifier != null) {
+                when {
+                    identifier == "true" -> {
+                        res.add(TokenData("true",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
+                    }
+                    identifier == "false" -> {
+                        res.add(TokenData("false",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
+                    }
+                    identifier == "null" -> {
+                        res.add(TokenData("null",EcmaGrammar.NullLiteral, lineNumber,lineIndex))
+                    }
+                    keywords.contains(identifier) -> {
+                        res.add(TokenData(identifier, identifier, lineNumber, lineIndex))
+                    }
+                    else -> {
+                        res.add(TokenData(identifier, EcmaGrammar.Identifier, lineNumber, lineIndex))
+                    }
+                }
                 continue
             }
             for(operator in operators) {

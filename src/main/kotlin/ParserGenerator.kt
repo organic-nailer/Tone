@@ -137,14 +137,14 @@ class LALR1ParserGenerator(
     private fun printTransitionMap() {
         println("Transition Table")
         print("   ")
-        lr1ParserGenerator.terminalTokens.forEach { print(" ${it.padStart(3)} ") }
+        lr1ParserGenerator.terminalTokens.forEach { print(" ${it.take(3).padStart(3)} ") }
         print("  $  ")
-        lr1ParserGenerator.nonTerminalTokens.forEach { print(" ${it.padStart(3)} ") }
+        lr1ParserGenerator.nonTerminalTokens.forEach { print(" ${it.take(3).padStart(3)} ") }
         print("\n")
         for(c in closureMap.values) {
             print(c.padEnd(3))
             lr1ParserGenerator.terminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.take(3)?.padStart(3) ?: "   "} ") }
-            print(" ${transitionMap[c to "$"]?.toString()?.padStart(3) ?: "   "} ")
+            print(" ${transitionMap[c to "$"]?.toString()?.take(3)?.padStart(3) ?: "   "} ")
             lr1ParserGenerator.nonTerminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.take(3)?.padStart(3) ?: "   "} ") }
             print("\n")
         }

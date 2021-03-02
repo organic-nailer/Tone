@@ -30,6 +30,7 @@ object EcmaGrammar {
     const val BooleanLiteral = "BooleanLiteral"
     const val NullLiteral = "NullLiteral"
     const val ThisLiteral = "this"
+    const val Identifier = "Identifier"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
@@ -37,16 +38,19 @@ object EcmaGrammar {
             " $OR $BooleanLiteral" +
             " $OR $NumericLiteral",
         "$PrimaryExpression ::= $ThisLiteral" +
+            " $OR $Identifier" +
             " $OR $Literal" +
             " $OR ( $Expression )",
         "$MemberExpression ::= $PrimaryExpression" +
             " $OR $MemberExpression [ $Expression ]" +
-            " $OR new $MemberExpression $Arguments",
+            " $OR new $MemberExpression $Arguments" +
+            " $OR $MemberExpression . $Identifier",
         "$NewExpression ::= $MemberExpression" +
             " $OR new $NewExpression",
         "$CallExpression ::= $MemberExpression $Arguments" +
             " $OR $CallExpression $Arguments" +
-            " $OR $CallExpression [ $Expression ]",
+            " $OR $CallExpression [ $Expression ]" +
+            " $OR $CallExpression . $Identifier",
         "$Arguments ::= ( )" +
             " $OR ( $ArgumentList )",
         "$ArgumentList ::= $AssignmentExpression" +
@@ -102,7 +106,7 @@ object EcmaGrammar {
         "$ConditionalExpression ::= $LogicalORExpression" +
             " $OR $LogicalORExpression ? $AssignmentExpression : $AssignmentExpression",
         "$AssignmentExpression ::= $ConditionalExpression" +
-            " $OR $NumericLiteral $AssignmentOperator $AssignmentExpression",
+            " $OR $LeftHandSideExpression $AssignmentOperator $AssignmentExpression",
         "$Expression ::= $AssignmentExpression" +
             " $OR $Expression , $AssignmentExpression",
         "$ExpressionStatement ::= $Expression"
