@@ -31,15 +31,30 @@ object EcmaGrammar {
     const val NullLiteral = "NullLiteral"
     const val ThisLiteral = "this"
     const val Identifier = "Identifier"
+    const val ArrayLiteral = "ArrayLiteral"
+    const val ElementList = "ElementList"
+    const val Elision = "Elision"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
+        "$ArrayLiteral ::= [ ]" +
+            " $OR [ $Elision ]" +
+            " $OR [ $ElementList ]" +
+            " $OR [ $ElementList , ]" +
+            " $OR [ $ElementList , $Elision ]",
+        "$ElementList ::= $AssignmentExpression" +
+            " $OR $Elision $AssignmentExpression" +
+            " $OR $ElementList , $AssignmentExpression" +
+            " $OR $ElementList , $Elision $AssignmentExpression",
+        "$Elision ::= ," +
+            " $OR $Elision ,",
         "$Literal ::= $NullLiteral" +
             " $OR $BooleanLiteral" +
             " $OR $NumericLiteral",
         "$PrimaryExpression ::= $ThisLiteral" +
             " $OR $Identifier" +
             " $OR $Literal" +
+            " $OR $ArrayLiteral" +
             " $OR ( $Expression )",
         "$MemberExpression ::= $PrimaryExpression" +
             " $OR $MemberExpression [ $Expression ]" +

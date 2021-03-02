@@ -95,4 +95,14 @@ class ParserTest {
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseArray() {
+        var parsed = parser.parse(Tokenizer("[]").tokenized)
+        parsed = parser.parse(Tokenizer("[1]").tokenized)
+        parsed = parser.parse(Tokenizer("[1,]").tokenized)
+        parsed = parser.parse(Tokenizer("[,,1,]").tokenized)
+        parsed = parser.parse(Tokenizer("[,1,,2]").tokenized)
+        assert(true)
+    }
 }

@@ -364,6 +364,20 @@ class Parser {
                         name = this.value
                     )
                 }
+                EcmaGrammar.ArrayLiteral -> {
+                    val elements = mutableListOf<Node?>()
+                    children.subList(1,children.size-1).forEach { node ->
+                        node.calcElementList(elements)
+                    }
+                    Node(
+                        type = NodeType.ArrayExpression,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        elements = elements
+                    )
+                }
                 EcmaGrammar.NumericLiteral -> {
                     Node(
                         type = NodeType.Literal,
@@ -408,6 +422,25 @@ class Parser {
                 }
             }
         }
+
+        private fun calcElementList(elements: MutableList<Node?>) {
+            if(this.kind == EcmaGrammar.Elision) {
+                elements.add(0,null)
+                if(children.size == 1) return
+                children[1].calcElementList(elements)
+                return
+            }
+            if(this.kind == EcmaGrammar.ElementList) {
+                for(child in this.children) {
+                    child.calcElementList(elements)
+                }
+                return
+            }
+            if(this.kind == EcmaGrammar.AssignmentExpression) {
+                elements.add(0, this.toNode())
+                return
+            }
+        }
     }
 
     @Serializable
@@ -427,6 +460,7 @@ class Parser {
         val callee: Node? = null,
         val `object`: Node? = null,
         val property: Node? = null,
+        val elements: List<Node?>? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
@@ -440,7 +474,7 @@ class Parser {
         UnaryExpression, UpdateExpression,
         NewExpression, ThisExpression,
         CallExpression, MemberExpression,
-        Identifier,
+        Identifier, ArrayExpression,
         UNKNOWN
     }
     @Serializable
