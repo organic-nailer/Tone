@@ -112,4 +112,11 @@ class ParserTest {
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseBlock() {
+        val tokenizer = Tokenizer("{x=2;}")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
 }

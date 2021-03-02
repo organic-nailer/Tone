@@ -127,6 +127,26 @@ class Parser {
                         body = bodyElements
                     )
                 }
+                EcmaGrammar.Block -> {
+                    val bodyElements = mutableListOf<Node>()
+                    var node = children[1]
+                    while(true) {
+                        if(node.children.size == 1) {
+                            bodyElements.add(0,node.children[0].toNode())
+                            break
+                        }
+                        bodyElements.add(0,node.children[0].toNode())
+                        node = node.children[1]
+                    }
+                    Node(
+                        type = NodeType.BlockStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        body = bodyElements
+                    )
+                }
                 EcmaGrammar.ExpressionStatement -> {
                     Node(
                         type = NodeType.ExpressionStatement,
@@ -507,6 +527,7 @@ class Parser {
         NewExpression, ThisExpression,
         CallExpression, MemberExpression,
         Identifier, ArrayExpression,
+        BlockStatement,
         UNKNOWN
     }
     @Serializable

@@ -38,6 +38,8 @@ object EcmaGrammar {
     const val ArrayLiteral = "ArrayLiteral"
     const val ElementList = "ElementList"
     const val Elision = "Elision"
+    const val Block = "Block"
+    const val StatementList = "StatementList"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
@@ -129,7 +131,12 @@ object EcmaGrammar {
         "$Expression ::= $AssignmentExpression" +
             " $OR $Expression , $AssignmentExpression",
         "$ExpressionStatement ::= $Expression ;",
-        "$Statement ::= $ExpressionStatement",
+        "$Block ::= { }" +
+            " $OR { $StatementList }",
+        "$StatementList ::= $Statement" +
+            " $OR $StatementList $Statement",
+        "$Statement ::= $Block" +
+            " $OR $ExpressionStatement",
         "$SourceElement ::= $Statement",
         "$SourceElements ::= $SourceElement" +
             " $OR $SourceElements $SourceElement",
