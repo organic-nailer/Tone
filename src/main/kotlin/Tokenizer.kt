@@ -21,7 +21,7 @@ class Tokenizer(input: String) {
         "-","+","!","~","typeof","void","delete","++","--","new"
     )
     private val keywords = setOf(
-        "this"
+        "this","(",")","[","]"
     )
     private val operators = mutableListOf<String>()
 

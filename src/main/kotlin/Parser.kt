@@ -1,17 +1,8 @@
 package esTree
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 
 class Parser {
     private val parserGenerator = LALR1ParserGenerator(
@@ -118,8 +109,6 @@ class Parser {
                     )
                 }
                 EcmaGrammar.Literal,
-                EcmaGrammar.PrimaryExpression,
-                EcmaGrammar.MemberExpression,
                 EcmaGrammar.LeftHandSideExpression,
                 EcmaGrammar.Expression -> {
                     children[0].toNode()
@@ -263,6 +252,74 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.CallExpression -> {
+                    if(children.size == 4) {
+                        Node(
+                            type = NodeType.MemberExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            `object` = children[3].toNode(),
+                            property = children[1].toNode(),
+                            computed = true,
+                        )
+                    }
+                    else {
+                        val argList = if(children[0].children.size == 2) null else children[0].children[1]
+                        Node(
+                            type = NodeType.CallExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            callee = children[1].toNode(),
+                            arguments = argList?.children
+                                ?.filter { a -> a.value != "," }
+                                ?.map { a -> a.toNode() }
+                                ?.asReversed()
+                        )
+                    }
+                }
+                EcmaGrammar.MemberExpression -> {
+                    if(children.size == 4) {
+                        Node(
+                            type = NodeType.MemberExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            `object` = children[3].toNode(),
+                            property = children[1].toNode(),
+                        )
+                    }
+                    else if(children.size == 3) {
+                        val argList = if(children[0].children.size == 2) null else children[0].children[1]
+                        Node(
+                            type = NodeType.NewExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            callee = children[2].toNode(),
+                            arguments = argList?.children
+                                ?.filter { a -> a.value != "," }
+                                ?.map { a -> a.toNode() }
+                                ?.asReversed()
+                        )
+                    }
+                    else {
+                        children[0].toNode()
+                    }
+                }
+                EcmaGrammar.PrimaryExpression -> {
+                    if(children.size == 3) {
+                        children[1].toNode()
+                    }
+                    else {
+                        children[0].toNode()
+                    }
+                }
                 EcmaGrammar.ThisLiteral -> {
                     Node(
                         type = NodeType.ThisExpression,
@@ -333,7 +390,10 @@ class Parser {
         val prefix: Boolean? = null,
         val arguments: List<Node>? = null,
         val callee: Node? = null,
+        val `object`: Node? = null,
+        val property: Node? = null,
         val operator: String? = null,
+        val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
         val raw: String? = null
     )
@@ -343,6 +403,7 @@ class Parser {
         ConditionalExpression, AssignmentExpression,
         UnaryExpression, UpdateExpression,
         NewExpression, ThisExpression,
+        CallExpression, MemberExpression,
         UNKNOWN
     }
     @Serializable

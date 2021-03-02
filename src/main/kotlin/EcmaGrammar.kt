@@ -20,6 +20,9 @@ object EcmaGrammar {
     const val UnaryExpression = "UnaryExpression"
     const val PostfixExpression = "PostfixExpression"
     const val ExpressionStatement = "ExpressionStatement"
+    const val CallExpression = "CallExpression"
+    const val Arguments = "Arguments"
+    const val ArgumentList = "ArgumentList"
     const val Expression = "Expression"
     const val AssignmentOperator = "AssignmentOperator"
     const val Literal = "Literal"
@@ -34,11 +37,22 @@ object EcmaGrammar {
             " $OR $BooleanLiteral" +
             " $OR $NumericLiteral",
         "$PrimaryExpression ::= $ThisLiteral" +
-            " $OR $Literal",
-        "$MemberExpression ::= $PrimaryExpression",
+            " $OR $Literal" +
+            " $OR ( $Expression )",
+        "$MemberExpression ::= $PrimaryExpression" +
+            " $OR $MemberExpression [ $Expression ]" +
+            " $OR new $MemberExpression $Arguments",
         "$NewExpression ::= $MemberExpression" +
             " $OR new $NewExpression",
-        "$LeftHandSideExpression ::= $NewExpression",
+        "$CallExpression ::= $MemberExpression $Arguments" +
+            " $OR $CallExpression $Arguments" +
+            " $OR $CallExpression [ $Expression ]",
+        "$Arguments ::= ( )" +
+            " $OR ( $ArgumentList )",
+        "$ArgumentList ::= $AssignmentExpression" +
+            " $OR $ArgumentList , $AssignmentExpression",
+        "$LeftHandSideExpression ::= $NewExpression" +
+            " $OR $CallExpression",
         "$PostfixExpression ::= $LeftHandSideExpression" +
             " $OR $LeftHandSideExpression ++" +
             " $OR $LeftHandSideExpression --",

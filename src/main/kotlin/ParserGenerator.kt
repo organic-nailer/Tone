@@ -111,7 +111,7 @@ class LALR1ParserGenerator(
         }
     }
 
-    fun printClosureMap() {
+    private fun printClosureMap() {
         println("Closures")
         closureMap.forEach { (t, u) ->
             println("${u.padEnd(3)}: $t")
@@ -134,7 +134,7 @@ class LALR1ParserGenerator(
         }
     }
 
-    fun printTransitionMap() {
+    private fun printTransitionMap() {
         println("Transition Table")
         print("   ")
         lr1ParserGenerator.terminalTokens.forEach { print(" ${it.padStart(3)} ") }
@@ -143,9 +143,9 @@ class LALR1ParserGenerator(
         print("\n")
         for(c in closureMap.values) {
             print(c.padEnd(3))
-            lr1ParserGenerator.terminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.padStart(3) ?: "   "} ") }
+            lr1ParserGenerator.terminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.take(3)?.padStart(3) ?: "   "} ") }
             print(" ${transitionMap[c to "$"]?.toString()?.padStart(3) ?: "   "} ")
-            lr1ParserGenerator.nonTerminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.padStart(3) ?: "   "} ") }
+            lr1ParserGenerator.nonTerminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.take(3)?.padStart(3) ?: "   "} ") }
             print("\n")
         }
     }

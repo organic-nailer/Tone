@@ -81,4 +81,11 @@ class ParserTest {
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseCall() {
+        val tokenizer = Tokenizer("1 ( 2 ) [ 3 ]")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
 }
