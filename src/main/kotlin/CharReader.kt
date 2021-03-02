@@ -53,6 +53,7 @@ class CharReader(
         while(index < lineLength && line[index].isDigit()) {
             index++
         }
-        return line.substring(currentIndex until index)
+        index--
+        return line.substring(currentIndex..index)
     }
 }

@@ -32,13 +32,14 @@ class Tokenizer(input: String) {
         operators.addAll(conditionalOperators)
         operators.addAll(unaryOperators)
         operators.addAll(keywords)
+        operators.distinct()
         operators.sortDescending()
         tokenize()
     }
 
     private fun tokenize() {
         val res = mutableListOf<TokenData>()
-        while(true) {
+        loopMain@ while(true) {
             val next = reader.getNextChar()
             if(next == CharReader.EOF) break
             if(next.isWhitespace()) continue
@@ -53,30 +54,30 @@ class Tokenizer(input: String) {
             }
             if(reader.prefixMatch("true")) {
                 res.add(TokenData("true",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
-                reader.index += 4
+                reader.index += 4-1
                 continue
             }
             if(reader.prefixMatch("false")) {
                 res.add(TokenData("false",EcmaGrammar.BooleanLiteral, lineNumber,lineIndex))
-                reader.index += 5
+                reader.index += 5-1
                 continue
             }
             if(reader.prefixMatch("null")) {
                 res.add(TokenData("null",EcmaGrammar.NullLiteral, lineNumber,lineIndex))
-                reader.index += 4
+                reader.index += 4-1
                 continue
             }
             for(operator in operators) {
                 if(reader.prefixMatch(operator)) {
                     if(assignmentOperators.contains(operator)) {
                         res.add(TokenData(operator, EcmaGrammar.AssignmentOperator, lineNumber, lineIndex))
-                        reader.index += operator.length
-                        continue
+                        reader.index += operator.length-1
+                        continue@loopMain
                     }
                     else {
                         res.add(TokenData(operator, operator, lineNumber, lineIndex))
-                        reader.index += operator.length
-                        continue
+                        reader.index += operator.length-1
+                        continue@loopMain
                     }
                 }
             }
