@@ -13,13 +13,7 @@ class Parser {
     fun parse(input: List<Tokenizer.TokenData>): String? {
         val preTree = parseInternal(input) ?: return null
 
-        val node = Node(
-            type = NodeType.Program,
-            loc = Location(start = Position(0,0), end = preTree.end ?: Position(-1,-1)),
-            body = listOf(
-                preTree.toNode()
-            )
-        )
+        val node = preTree.toNode()
         val json = Json.encodeToString(node)
         println(json)
         return json
@@ -80,7 +74,8 @@ class Parser {
             println("受理されませんでした ${nodeStack.first()}")
             return null
         }
-        println("nodeInternal: ${nodeStack.first()}")
+        println("nodeInternal: ")
+        nodeStack.first().print("")
         return nodeStack.first()
     }
 
@@ -92,12 +87,46 @@ class Parser {
         var end: Position?,
     ) {
         fun print(indent: String) {
-            println(indent + this.kind)
-            this.children.forEach { it.print("$indent  ") }
+            val values = if(value != null) "$start,$end,$value" else "$start,$end"
+            if(children.isEmpty()) {
+                println("$indent$kind($values)")
+                return
+            }
+            println("$indent$kind($values):c=[")
+            children.reversed().forEach { it.print("$indent  ") }
+            println("$indent]")
+        }
+
+        override fun toString(): String {
+            return if(value != null){
+                "$kind($start,$end,$value):c=$children"
+            } else {
+                "$kind($start,$end):c=$children"
+            }
         }
 
         fun toNode(): Node {
             return when(kind) {
+                EcmaGrammar.Program -> {
+                    val bodyElements = mutableListOf<Node>()
+                    var node = children[0]
+                    while(true) {
+                        if(node.children.size == 1) {
+                            bodyElements.add(0,node.children[0].toNode())
+                            break
+                        }
+                        bodyElements.add(0,node.children[0].toNode())
+                        node = node.children[1]
+                    }
+                    Node(
+                        type = NodeType.Program,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        body = bodyElements
+                    )
+                }
                 EcmaGrammar.ExpressionStatement -> {
                     Node(
                         type = NodeType.ExpressionStatement,
@@ -105,9 +134,11 @@ class Parser {
                             start = this.start ?: Position(-1,-1),
                             end = this.end ?: Position(-1,-1)
                         ),
-                        expression = children[0].toNode()
+                        expression = children[1].toNode()
                     )
                 }
+                EcmaGrammar.SourceElement,
+                EcmaGrammar.Statement,
                 EcmaGrammar.Literal,
                 EcmaGrammar.LeftHandSideExpression,
                 EcmaGrammar.Expression -> {
@@ -412,6 +443,7 @@ class Parser {
                     )
                 }
                 else -> {
+                    println("UnKnownType Detected: $kind")
                     Node(
                         type = NodeType.UNKNOWN,
                         loc = Location(
@@ -486,5 +518,9 @@ class Parser {
     data class Position(
         val line: Int,
         val column: Int,
-    )
+    ) {
+        override fun toString(): String {
+            return "P$line:$column"
+        }
+    }
 }

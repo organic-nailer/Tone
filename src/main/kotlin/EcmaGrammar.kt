@@ -24,6 +24,10 @@ object EcmaGrammar {
     const val Arguments = "Arguments"
     const val ArgumentList = "ArgumentList"
     const val Expression = "Expression"
+    const val Program = "Program"
+    const val SourceElements = "SourceElements"
+    const val SourceElement = "SourceElement"
+    const val Statement = "Statement"
     const val AssignmentOperator = "AssignmentOperator"
     const val Literal = "Literal"
     const val NumericLiteral = "NumericLiteral"
@@ -124,9 +128,14 @@ object EcmaGrammar {
             " $OR $LeftHandSideExpression $AssignmentOperator $AssignmentExpression",
         "$Expression ::= $AssignmentExpression" +
             " $OR $Expression , $AssignmentExpression",
-        "$ExpressionStatement ::= $Expression"
+        "$ExpressionStatement ::= $Expression ;",
+        "$Statement ::= $ExpressionStatement",
+        "$SourceElement ::= $Statement",
+        "$SourceElements ::= $SourceElement" +
+            " $OR $SourceElements $SourceElement",
+        "$Program ::= $SourceElements"
     )
-    val es5StartSymbol = ExpressionStatement
+    const val es5StartSymbol = Program
 
     fun grammarParser(grammar: List<String>): List<LR1ParserGenerator.ProductionRuleData> {
         val result = mutableListOf<LR1ParserGenerator.ProductionRuleData>()

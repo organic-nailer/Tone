@@ -105,4 +105,11 @@ class ParserTest {
         parsed = parser.parse(Tokenizer("[,1,,2]").tokenized)
         assert(true)
     }
+
+    @Test
+    fun parseProgram() {
+        val tokenizer = Tokenizer("x=2;y=3;")
+        val parsed = parser.parse(tokenizer.tokenized)
+        assert(true)
+    }
 }
