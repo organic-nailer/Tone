@@ -10,14 +10,14 @@ class Tokenizer(input: String) {
         "<<",">>",">>>","+","-","*","/","%","|",
         "^","&",
         "?", ":","!","~","++","--","(",")",
-        "[","]",".",",",";","{","}"
+        "[","]",".",",",";","{","}","="
     )
     private val assignmentOperators = setOf(
-        "=","+=","-=","*=","/=","%=","<<=",">>=",
+        "+=","-=","*=","/=","%=","<<=",">>=", // '=' は外でも使うのではずし
         ">>>=","|=","^=","&="
     )
     private val keywords = setOf(
-        "this","in","instanceof","typeof","void","delete","new"
+        "this","in","instanceof","typeof","void","delete","new","var"
     )
     private val operators = mutableListOf<String>()
 

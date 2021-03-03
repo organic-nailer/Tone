@@ -152,6 +152,59 @@ class Parser {
                         body = bodyElements
                     )
                 }
+                EcmaGrammar.VariableStatement -> {
+                    val decsElements = mutableListOf<Node>()
+                    var node = children[1]
+                    while(true) {
+                        if(node.children.size == 1) {
+                            decsElements.add(0,node.children[0].toNode())
+                            break
+                        }
+                        decsElements.add(0,node.children[0].toNode())
+                        node = node.children[2]
+                    }
+                    Node(
+                        type = NodeType.VariableDeclaration,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        declarations = decsElements,
+                        kind = "var"
+                    )
+                }
+                EcmaGrammar.VariableDeclaration -> {
+                    if(children.size == 2) {
+                        Node(
+                            type = NodeType.VariableDeclarator,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            id = children[1].toNode(),
+                            init = children[0].children[0].toNode()
+                        )
+                    }
+                    else {
+                        Node(
+                            type = NodeType.VariableDeclarator,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            id = children[0].toNode()
+                        )
+                    }
+                }
+                EcmaGrammar.EmptyStatement -> {
+                    Node(
+                        type = NodeType.EmptyStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                    )
+                }
                 EcmaGrammar.ExpressionStatement -> {
                     Node(
                         type = NodeType.ExpressionStatement,
@@ -556,11 +609,15 @@ class Parser {
         val `object`: Node? = null,
         val property: Node? = null,
         val elements: List<Node?>? = null,
+        val declarations: List<Node>? = null,
+        val id: Node? = null,
+        val init: Node? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
         val name: String? = null,
-        val raw: String? = null
+        val raw: String? = null,
+        val kind: String? = null
     )
     enum class NodeType {
         Program, ExpressionStatement, Literal,
@@ -571,6 +628,8 @@ class Parser {
         CallExpression, MemberExpression,
         Identifier, ArrayExpression,
         BlockStatement,
+        VariableDeclaration, VariableDeclarator,
+        EmptyStatement,
         UNKNOWN
     }
     @Serializable

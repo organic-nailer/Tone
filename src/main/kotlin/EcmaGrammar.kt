@@ -40,6 +40,11 @@ object EcmaGrammar {
     const val Elision = "Elision"
     const val Block = "Block"
     const val StatementList = "StatementList"
+    const val VariableStatement = "VariableStatement"
+    const val VariableDeclarationList = "VariableDeclarationList"
+    const val VariableDeclaration = "VariableDeclaration"
+    const val Initializer = "Initializer"
+    const val EmptyStatement = "EmptyStatement"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
@@ -127,7 +132,8 @@ object EcmaGrammar {
         "$ConditionalExpression ::= $LogicalORExpression" +
             " $OR $LogicalORExpression ? $AssignmentExpression : $AssignmentExpression",
         "$AssignmentExpression ::= $ConditionalExpression" +
-            " $OR $LeftHandSideExpression $AssignmentOperator $AssignmentExpression",
+            " $OR $LeftHandSideExpression $AssignmentOperator $AssignmentExpression" +
+            " $OR $LeftHandSideExpression = $AssignmentExpression",
         "$Expression ::= $AssignmentExpression" +
             " $OR $Expression , $AssignmentExpression",
         "$ExpressionStatement ::= $Expression ;",
@@ -135,7 +141,16 @@ object EcmaGrammar {
             " $OR { $StatementList }",
         "$StatementList ::= $Statement" +
             " $OR $StatementList $Statement",
+        "$VariableStatement ::= var $VariableDeclarationList ;",
+        "$VariableDeclarationList ::= $VariableDeclaration" +
+            " $OR $VariableDeclarationList , $VariableDeclaration",
+        "$VariableDeclaration ::= $Identifier" +
+            " $OR $Identifier $Initializer",
+        "$Initializer ::= = $AssignmentExpression",
+        "$EmptyStatement ::= ;",
         "$Statement ::= $Block" +
+            " $OR $VariableStatement" +
+            " $OR $EmptyStatement" +
             " $OR $ExpressionStatement",
         "$SourceElement ::= $Statement",
         "$SourceElements ::= $SourceElement" +

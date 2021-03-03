@@ -173,4 +173,22 @@ class ParserTest {
         )
         assertEquals("[]",patch.toString())
     }
+
+    @Test
+    fun statementTest() {
+        val file = (ParserTest::class.java).classLoader.getResource("StatementTest.js") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        val text = File(file.toURI()).readText()
+        val tokenizer = Tokenizer(text)
+        val parsed = parser.parse(tokenizer.tokenized) ?: ""
+
+        val jsonFile = (ParserTest::class.java).classLoader.getResource("StatementTestExpected.json") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        assertJson(
+            File(jsonFile.toURI()).readText(),
+            parsed
+        )
+    }
 }
