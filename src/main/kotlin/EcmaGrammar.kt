@@ -63,6 +63,18 @@ object EcmaGrammar {
     const val ContinueStatement = "ContinueStatement"
     const val BreakStatement = "BreakStatement"
     const val ReturnStatement = "ReturnStatement"
+    const val WithStatement = "WithStatement"
+    const val SwitchStatement = "SwitchStatement"
+    const val CaseBlock = "CaseBlock"
+    const val CaseClauses = "CaseClauses"
+    const val CaseClause = "CaseClause"
+    const val DefaultClause = "DefaultClause"
+    const val LabelledStatement = "LabelledStatement"
+    const val ThrowStatement = "ThrowStatement"
+    const val TryStatement = "TryStatement"
+    const val Catch = "Catch"
+    const val Finally = "Finally"
+    const val DebuggerStatement = "DebuggerStatement"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
@@ -213,6 +225,28 @@ object EcmaGrammar {
             " $OR break $Identifier ;",
         "$ReturnStatement ::= return ;" +
             " $OR return $Expression ;",
+        "$WithStatement ::= with ( $Expression ) $Statement",
+        "$SwitchStatement ::= switch ( $Expression ) $CaseBlock",
+        "$CaseBlock ::= { }" +
+            " $OR { $CaseClauses }" +
+            " $OR { $DefaultClause }" +
+            " $OR { $CaseClauses $DefaultClause }" +
+            " $OR { $DefaultClause $CaseClauses }" +
+            " $OR { $CaseClauses $DefaultClause $CaseClauses }",
+        "$CaseClauses ::= $CaseClause" +
+            " $OR $CaseClauses $CaseClause",
+        "$CaseClause ::= case $Expression :" +
+            " $OR case $Expression : $StatementList",
+        "$DefaultClause ::= default :" +
+            " $OR default : $StatementList",
+        "$LabelledStatement ::= $Identifier : $Statement",
+        "$ThrowStatement ::= throw $Expression ;",
+        "$TryStatement ::= try $Block $Catch" +
+            " $OR try $Block $Finally" +
+            " $OR try $Block $Catch $Finally",
+        "$Catch ::= catch ( $Identifier ) $Block",
+        "$Finally ::= finally $Block",
+        "$DebuggerStatement ::= debugger ;",
         "$Statement ::= $Block" +
             " $OR $VariableStatement" +
             " $OR $EmptyStatement" +
@@ -221,7 +255,13 @@ object EcmaGrammar {
             " $OR $IterationStatement" +
             " $OR $ContinueStatement" +
             " $OR $BreakStatement" +
-            " $OR $ReturnStatement",
+            " $OR $ReturnStatement" +
+            " $OR $WithStatement" +
+            " $OR $LabelledStatement" +
+            " $OR $SwitchStatement" +
+            " $OR $ThrowStatement" +
+            " $OR $TryStatement" +
+            " $OR $DebuggerStatement",
         "$SourceElement ::= $Statement",
         "$SourceElements ::= $SourceElement" +
             " $OR $SourceElements $SourceElement",

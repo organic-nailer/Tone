@@ -376,6 +376,171 @@ class Parser {
                         argument = if(children.size == 3) children[1].toNode() else null
                     )
                 }
+                EcmaGrammar.WithStatement -> {
+                    Node(
+                        type = NodeType.WithStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        `object` = children[2].toNode(),
+                        bodySingle = children[0].toNode()
+                    )
+                }
+                EcmaGrammar.SwitchStatement -> {
+                    val cases = mutableListOf<Node>()
+                    children[0].children.forEach { c ->
+                        when(c.kind) {
+                            EcmaGrammar.CaseClauses -> {
+                                var node = c
+                                while(true) {
+                                    if(node.children.size == 1) {
+                                        cases.add(0,node.children[0].toNode())
+                                        break
+                                    }
+                                    cases.add(0,node.children[0].toNode())
+                                    node = node.children[1]
+                                }
+                            }
+                            EcmaGrammar.DefaultClause -> {
+                                cases.add(0,c.toNode())
+                            }
+                        }
+                    }
+                    Node(
+                        type = NodeType.SwitchStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        discriminant = children[2].toNode(),
+                        cases = cases
+                    )
+                }
+                EcmaGrammar.CaseClause -> {
+                    val consequents = mutableListOf<Node>()
+                    if(children.size == 4) {
+                        var node = children[0]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                consequents.add(0,node.children[0].toNode())
+                                break
+                            }
+                            consequents.add(0,node.children[0].toNode())
+                            node = node.children[1]
+                        }
+                    }
+                    Node(
+                        type = NodeType.SwitchCase,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        test = if(children.size == 4) children[2].toNode() else children[1].toNode(),
+                        consequents = consequents
+                    )
+                }
+                EcmaGrammar.DefaultClause -> {
+                    val consequents = mutableListOf<Node>()
+                    if(children.size == 3) {
+                        var node = children[0]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                consequents.add(0,node.children[0].toNode())
+                                break
+                            }
+                            consequents.add(0,node.children[0].toNode())
+                            node = node.children[1]
+                        }
+                    }
+                    Node(
+                        type = NodeType.SwitchCase,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        test = null,
+                        consequents = consequents
+                    )
+                }
+                EcmaGrammar.LabelledStatement -> {
+                    Node(
+                        type = NodeType.LabeledStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        label = children[2].toNode(),
+                        bodySingle = children[0].toNode()
+                    )
+                }
+                EcmaGrammar.ThrowStatement -> {
+                    Node(
+                        type = NodeType.ThrowStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        argument = children[1].toNode()
+                    )
+                }
+                EcmaGrammar.TryStatement -> {
+                    if(children.size == 3 && children[0].kind == EcmaGrammar.Catch) {
+                        Node(
+                            type = NodeType.TryStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            block = children[1].toNode(),
+                            handler = children[0].toNode()
+                        )
+                    }
+                    else if(children.size == 3) {
+                        Node(
+                            type = NodeType.TryStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            block = children[1].toNode(),
+                            finalizer = children[0].toNode()
+                        )
+                    }
+                    else {
+                        Node(
+                            type = NodeType.TryStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            block = children[2].toNode(),
+                            handler = children[1].toNode(),
+                            finalizer = children[0].toNode()
+                        )
+                    }
+                }
+                EcmaGrammar.Catch -> {
+                    Node(
+                        type = NodeType.CatchClause,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        param = children[2].toNode(),
+                        bodySingle = children[0].toNode()
+                    )
+                }
+                EcmaGrammar.DebuggerStatement -> {
+                    Node(
+                        type = NodeType.DebuggerStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        )
+                    )
+                }
+                EcmaGrammar.Finally,
                 EcmaGrammar.SourceElement,
                 EcmaGrammar.Statement,
                 EcmaGrammar.Literal,
@@ -786,6 +951,13 @@ class Parser {
         val bodySingle: Node? = null,
         val update: Node? = null,
         val label: Node? = null,
+        val discriminant: Node? = null,
+        val cases: List<Node>? = null,
+        val consequents: List<Node>? = null,
+        val block: Node? = null,
+        val handler: Node? = null,
+        val finalizer: Node? = null,
+        val param: Node? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
@@ -806,7 +978,9 @@ class Parser {
         EmptyStatement, IfStatement,
         WhileStatement, DoWhileStatement, ForStatement,
         ForInStatement, ContinueStatement, BreakStatement,
-        ReturnStatement,
+        ReturnStatement, WithStatement, SwitchStatement,
+        SwitchCase, LabeledStatement, ThrowStatement,
+        TryStatement, CatchClause, DebuggerStatement,
         UNKNOWN
     }
     @Serializable
