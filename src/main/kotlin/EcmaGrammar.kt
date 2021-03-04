@@ -45,6 +45,11 @@ object EcmaGrammar {
     const val VariableDeclaration = "VariableDeclaration"
     const val Initializer = "Initializer"
     const val EmptyStatement = "EmptyStatement"
+    const val IfStatement = "IfStatement"
+    const val IterationStatement = "IterationStatement"
+    const val ContinueStatement = "ContinueStatement"
+    const val BreakStatement = "BreakStatement"
+    const val ReturnStatement = "ReturnStatement"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
@@ -148,10 +153,29 @@ object EcmaGrammar {
             " $OR $Identifier $Initializer",
         "$Initializer ::= = $AssignmentExpression",
         "$EmptyStatement ::= ;",
+        "$IfStatement ::= if ( $Expression ) $Statement else $Statement" +
+            " $OR if ( $Expression ) $Statement",
+        "$IterationStatement ::= do $Statement while ( $Expression ) ;" +
+            " $OR while ( $Expression ) $Statement" +
+            " $OR for ( $Expression ; $Expression ; $Expression ) $Statement" +
+            " $OR for ( var $VariableDeclarationList ; $Expression ; $Expression ) $Statement" +
+            " $OR for ( $LeftHandSideExpression in $Expression ) $Statement" +
+            " $OR for ( var $VariableDeclaration in $Expression ) $Statement",
+        "$ContinueStatement ::= continue ;" +
+            " $OR continue $Identifier ;",
+        "$BreakStatement ::= break ;" +
+            " $OR break $Identifier ;",
+        "$ReturnStatement ::= return ;" +
+            " $OR return $Expression ;",
         "$Statement ::= $Block" +
             " $OR $VariableStatement" +
             " $OR $EmptyStatement" +
-            " $OR $ExpressionStatement",
+            " $OR $ExpressionStatement" +
+            " $OR $IfStatement" +
+            " $OR $IterationStatement" +
+            " $OR $ContinueStatement" +
+            " $OR $BreakStatement" +
+            " $OR $ReturnStatement",
         "$SourceElement ::= $Statement",
         "$SourceElements ::= $SourceElement" +
             " $OR $SourceElements $SourceElement",

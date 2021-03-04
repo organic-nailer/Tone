@@ -1,5 +1,6 @@
 package esTree
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -172,6 +173,106 @@ class Parser {
                         declarations = decsElements,
                         kind = "var"
                     )
+                }
+                EcmaGrammar.IfStatement -> {
+                    if(children.size == 7) {
+                        Node(
+                            type = NodeType.IfStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            test = children[4].toNode(),
+                            consequent = children[2].toNode(),
+                            alternate = children[0].toNode()
+                        )
+                    }
+                    else {
+                        Node(
+                            type = NodeType.IfStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            test = children[2].toNode(),
+                            consequent = children[0].toNode(),
+                            alternate = null
+                        )
+                    }
+                }
+                EcmaGrammar.IterationStatement -> {
+                    if(children.size == 7 && children[6].value == "do") {
+                        Node(
+                            type = NodeType.DoWhileStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            test = children[2].toNode(),
+                            bodySingle = children[5].toNode()
+                        )
+                    }
+                    else if(children.size == 5) {
+                        Node(
+                            type = NodeType.WhileStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            test = children[2].toNode(),
+                            bodySingle = children[0].toNode()
+                        )
+                    }
+                    else if(children.size == 9) {
+                        Node(
+                            type = NodeType.ForStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            init = children[6].toNode(),
+                            test = children[4].toNode(),
+                            update = children[2].toNode(),
+                            bodySingle = children[0].toNode()
+                        )
+                    }
+                    else if(children.size == 10) {
+                        Node(
+                            type = NodeType.ForStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            init = children[6].toNode(),
+                            test = children[4].toNode(),
+                            update = children[2].toNode(),
+                            bodySingle = children[0].toNode()
+                        )
+                    }
+                    else if(children.size == 7) {
+                        Node(
+                            type = NodeType.ForInStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            left = children[4].toNode(),
+                            right = children[2].toNode(),
+                            bodySingle = children[0].toNode()
+                        )
+                    }
+                    else {
+                        Node(
+                            type = NodeType.ForInStatement,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            left = children[4].toNode(),
+                            right = children[2].toNode(),
+                            bodySingle = children[0].toNode()
+                        )
+                    }
                 }
                 EcmaGrammar.VariableDeclaration -> {
                     if(children.size == 2) {
@@ -612,6 +713,8 @@ class Parser {
         val declarations: List<Node>? = null,
         val id: Node? = null,
         val init: Node? = null,
+        val bodySingle: Node? = null,
+        val update: Node? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
@@ -629,7 +732,10 @@ class Parser {
         Identifier, ArrayExpression,
         BlockStatement,
         VariableDeclaration, VariableDeclarator,
-        EmptyStatement,
+        EmptyStatement, IfStatement,
+        WhileStatement, DoWhileStatement, ForStatement,
+        ForInStatement, ContinueStatement, BreakStatement,
+        ReturnStatement,
         UNKNOWN
     }
     @Serializable
