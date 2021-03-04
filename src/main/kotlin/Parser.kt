@@ -237,13 +237,32 @@ class Parser {
                         )
                     }
                     else if(children.size == 10) {
+                        val decsElements = mutableListOf<Node>()
+                        var node = children[6]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                decsElements.add(0,node.children[0].toNode())
+                                break
+                            }
+                            decsElements.add(0,node.children[0].toNode())
+                            node = node.children[2]
+                        }
+                        val initNode = Node(
+                            type = NodeType.VariableDeclaration,
+                            loc = Location(
+                                start = children[7].start ?: Position(-1,-1),
+                                end = children[6].end ?: Position(-1,-1)
+                            ),
+                            declarations = decsElements,
+                            kind = "var"
+                        )
                         Node(
                             type = NodeType.ForStatement,
                             loc = Location(
                                 start = this.start ?: Position(-1,-1),
                                 end = this.end ?: Position(-1,-1)
                             ),
-                            init = children[6].toNode(),
+                            init = initNode,
                             test = children[4].toNode(),
                             update = children[2].toNode(),
                             bodySingle = children[0].toNode()
@@ -268,12 +287,23 @@ class Parser {
                                 start = this.start ?: Position(-1,-1),
                                 end = this.end ?: Position(-1,-1)
                             ),
-                            left = children[4].toNode(),
+                            left = Node(
+                                type = NodeType.VariableDeclaration,
+                                loc = Location(
+                                    start = children[5].start ?: Position(-1,-1),
+                                    end = children[4].end ?: Position(-1,-1)
+                                ),
+                                declarations = listOf(
+                                    children[4].toNode()
+                                ),
+                                kind = "var"
+                            ),
                             right = children[2].toNode(),
                             bodySingle = children[0].toNode()
                         )
                     }
                 }
+                EcmaGrammar.VariableDeclarationNoIn,
                 EcmaGrammar.VariableDeclaration -> {
                     if(children.size == 2) {
                         Node(
@@ -316,13 +346,45 @@ class Parser {
                         expression = children[1].toNode()
                     )
                 }
+                EcmaGrammar.ContinueStatement -> {
+                    Node(
+                        type = NodeType.ContinueStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        label = if(children.size == 3) children[1].toNode() else null
+                    )
+                }
+                EcmaGrammar.BreakStatement -> {
+                    Node(
+                        type = NodeType.BreakStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        label = if(children.size == 3) children[1].toNode() else null
+                    )
+                }
+                EcmaGrammar.ReturnStatement -> {
+                    Node(
+                        type = NodeType.ReturnStatement,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        argument = if(children.size == 3) children[1].toNode() else null
+                    )
+                }
                 EcmaGrammar.SourceElement,
                 EcmaGrammar.Statement,
                 EcmaGrammar.Literal,
                 EcmaGrammar.LeftHandSideExpression,
+                EcmaGrammar.ExpressionNoIn,
                 EcmaGrammar.Expression -> {
                     children[0].toNode()
                 }
+                EcmaGrammar.AssignmentExpressionNoIn,
                 EcmaGrammar.AssignmentExpression -> {
                     if(children.size >= 2) {
                         Node(
@@ -340,6 +402,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.ConditionalExpressionNoIn,
                 EcmaGrammar.ConditionalExpression -> {
                     if(children.size == 5) {
                         Node(
@@ -357,6 +420,8 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.LogicalANDExpressionNoIn,
+                EcmaGrammar.LogicalORExpressionNoIn,
                 EcmaGrammar.LogicalANDExpression,
                 EcmaGrammar.LogicalORExpression -> {
                     if(children.size >= 2) {
@@ -378,6 +443,11 @@ class Parser {
                 EcmaGrammar.AdditiveExpression,
                 EcmaGrammar.MultiplicativeExpression,
                 EcmaGrammar.ShiftExpression,
+                EcmaGrammar.RelationalExpressionNoIn,
+                EcmaGrammar.EqualityExpressionNoIn,
+                EcmaGrammar.BitwiseANDExpressionNoIn,
+                EcmaGrammar.BitwiseXORExpressionNoIn,
+                EcmaGrammar.BitwiseORExpressionNoIn,
                 EcmaGrammar.RelationalExpression,
                 EcmaGrammar.EqualityExpression,
                 EcmaGrammar.BitwiseANDExpression,
@@ -715,6 +785,7 @@ class Parser {
         val init: Node? = null,
         val bodySingle: Node? = null,
         val update: Node? = null,
+        val label: Node? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力

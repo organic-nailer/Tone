@@ -5,14 +5,23 @@ object EcmaGrammar {
     const val AdditiveExpression = "AdditiveExpression"
     const val ShiftExpression = "ShiftExpression"
     const val RelationalExpression = "RelationalExpression"
+    const val RelationalExpressionNoIn = "RelationalExpressionNoIn"
     const val EqualityExpression = "EqualityExpression"
+    const val EqualityExpressionNoIn = "EqualityExpressionNoIn"
     const val BitwiseANDExpression = "BitwiseANDExpression"
+    const val BitwiseANDExpressionNoIn = "BitwiseANDExpressionNoIn"
     const val BitwiseXORExpression = "BitwiseXORExpression"
+    const val BitwiseXORExpressionNoIn = "BitwiseXORExpressionNoIn"
     const val BitwiseORExpression = "BitwiseORExpression"
+    const val BitwiseORExpressionNoIn = "BitwiseORExpressionNoIn"
     const val LogicalANDExpression = "LogicalANDExpression"
+    const val LogicalANDExpressionNoIn = "LogicalANDExpressionNoIn"
     const val LogicalORExpression = "LogicalORExpression"
+    const val LogicalORExpressionNoIn = "LogicalORExpressionNoIn"
     const val ConditionalExpression = "ConditionalExpression"
+    const val ConditionalExpressionNoIn = "ConditionalExpressionNoIn"
     const val AssignmentExpression = "AssignmentExpression"
+    const val AssignmentExpressionNoIn = "AssignmentExpressionNoIn"
     const val LeftHandSideExpression = "LeftHandSideExpression"
     const val NewExpression = "NewExpression"
     const val MemberExpression = "MemberExpression"
@@ -24,6 +33,7 @@ object EcmaGrammar {
     const val Arguments = "Arguments"
     const val ArgumentList = "ArgumentList"
     const val Expression = "Expression"
+    const val ExpressionNoIn = "ExpressionNoIn"
     const val Program = "Program"
     const val SourceElements = "SourceElements"
     const val SourceElement = "SourceElement"
@@ -42,8 +52,11 @@ object EcmaGrammar {
     const val StatementList = "StatementList"
     const val VariableStatement = "VariableStatement"
     const val VariableDeclarationList = "VariableDeclarationList"
+    const val VariableDeclarationListNoIn = "VariableDeclarationListNoIn"
     const val VariableDeclaration = "VariableDeclaration"
+    const val VariableDeclarationNoIn = "VariableDeclarationNoIn"
     const val Initializer = "Initializer"
+    const val InitializerNoIn = "InitializerNoIn"
     const val EmptyStatement = "EmptyStatement"
     const val IfStatement = "IfStatement"
     const val IterationStatement = "IterationStatement"
@@ -119,28 +132,56 @@ object EcmaGrammar {
             " $OR $RelationalExpression >= $ShiftExpression" +
             " $OR $RelationalExpression instanceof $ShiftExpression" +
             " $OR $RelationalExpression in $ShiftExpression",
+        "$RelationalExpressionNoIn ::= $ShiftExpression" +
+            " $OR $RelationalExpressionNoIn < $ShiftExpression" +
+            " $OR $RelationalExpressionNoIn > $ShiftExpression" +
+            " $OR $RelationalExpressionNoIn <= $ShiftExpression" +
+            " $OR $RelationalExpressionNoIn >= $ShiftExpression" +
+            " $OR $RelationalExpressionNoIn instanceof $ShiftExpression",
         "$EqualityExpression ::= $RelationalExpression" +
             " $OR $EqualityExpression == $RelationalExpression" +
             " $OR $EqualityExpression != $RelationalExpression" +
             " $OR $EqualityExpression === $RelationalExpression" +
             " $OR $EqualityExpression !== $RelationalExpression",
+        "$EqualityExpressionNoIn ::= $RelationalExpressionNoIn" +
+            " $OR $EqualityExpressionNoIn == $RelationalExpressionNoIn" +
+            " $OR $EqualityExpressionNoIn != $RelationalExpressionNoIn" +
+            " $OR $EqualityExpressionNoIn === $RelationalExpressionNoIn" +
+            " $OR $EqualityExpressionNoIn !== $RelationalExpressionNoIn",
         "$BitwiseANDExpression ::= $EqualityExpression" +
             " $OR $BitwiseANDExpression & $EqualityExpression",
+        "$BitwiseANDExpressionNoIn ::= $EqualityExpressionNoIn" +
+            " $OR $BitwiseANDExpressionNoIn & $EqualityExpressionNoIn",
         "$BitwiseXORExpression ::= $BitwiseANDExpression" +
             " $OR $BitwiseXORExpression ^ $BitwiseANDExpression",
+        "$BitwiseXORExpressionNoIn ::= $BitwiseANDExpressionNoIn" +
+            " $OR $BitwiseXORExpressionNoIn ^ $BitwiseANDExpressionNoIn",
         "$BitwiseORExpression ::= $BitwiseXORExpression" +
             " $OR $BitwiseORExpression | $BitwiseXORExpression",
+        "$BitwiseORExpressionNoIn ::= $BitwiseXORExpressionNoIn" +
+            " $OR $BitwiseORExpressionNoIn | $BitwiseXORExpressionNoIn",
         "$LogicalANDExpression ::= $BitwiseORExpression" +
             " $OR $LogicalANDExpression && $BitwiseORExpression",
+        "$LogicalANDExpressionNoIn ::= $BitwiseORExpressionNoIn" +
+            " $OR $LogicalANDExpressionNoIn && $BitwiseORExpressionNoIn",
         "$LogicalORExpression ::= $LogicalANDExpression" +
             " $OR $LogicalORExpression || $LogicalANDExpression",
+        "$LogicalORExpressionNoIn ::= $LogicalANDExpressionNoIn" +
+            " $OR $LogicalORExpressionNoIn || $LogicalANDExpressionNoIn",
         "$ConditionalExpression ::= $LogicalORExpression" +
             " $OR $LogicalORExpression ? $AssignmentExpression : $AssignmentExpression",
+        "$ConditionalExpressionNoIn ::= $LogicalORExpressionNoIn" +
+            " $OR $LogicalORExpressionNoIn ? $AssignmentExpressionNoIn : $AssignmentExpressionNoIn",
         "$AssignmentExpression ::= $ConditionalExpression" +
             " $OR $LeftHandSideExpression $AssignmentOperator $AssignmentExpression" +
             " $OR $LeftHandSideExpression = $AssignmentExpression",
+        "$AssignmentExpressionNoIn ::= $ConditionalExpressionNoIn" +
+            " $OR $LeftHandSideExpression $AssignmentOperator $AssignmentExpressionNoIn" +
+            " $OR $LeftHandSideExpression = $AssignmentExpressionNoIn",
         "$Expression ::= $AssignmentExpression" +
             " $OR $Expression , $AssignmentExpression",
+        "$ExpressionNoIn ::= $AssignmentExpressionNoIn" +
+            " $OR $ExpressionNoIn , $AssignmentExpressionNoIn",
         "$ExpressionStatement ::= $Expression ;",
         "$Block ::= { }" +
             " $OR { $StatementList }",
@@ -149,18 +190,23 @@ object EcmaGrammar {
         "$VariableStatement ::= var $VariableDeclarationList ;",
         "$VariableDeclarationList ::= $VariableDeclaration" +
             " $OR $VariableDeclarationList , $VariableDeclaration",
+        "$VariableDeclarationListNoIn ::= $VariableDeclarationNoIn" +
+            " $OR $VariableDeclarationListNoIn , $VariableDeclarationNoIn",
         "$VariableDeclaration ::= $Identifier" +
             " $OR $Identifier $Initializer",
+        "$VariableDeclarationNoIn ::= $Identifier" +
+            " $OR $Identifier $InitializerNoIn",
         "$Initializer ::= = $AssignmentExpression",
+        "$InitializerNoIn ::= = $AssignmentExpressionNoIn",
         "$EmptyStatement ::= ;",
         "$IfStatement ::= if ( $Expression ) $Statement else $Statement" +
             " $OR if ( $Expression ) $Statement",
         "$IterationStatement ::= do $Statement while ( $Expression ) ;" +
             " $OR while ( $Expression ) $Statement" +
-            " $OR for ( $Expression ; $Expression ; $Expression ) $Statement" +
-            " $OR for ( var $VariableDeclarationList ; $Expression ; $Expression ) $Statement" +
+            " $OR for ( $ExpressionNoIn ; $Expression ; $Expression ) $Statement" +
+            " $OR for ( var $VariableDeclarationListNoIn ; $Expression ; $Expression ) $Statement" +
             " $OR for ( $LeftHandSideExpression in $Expression ) $Statement" +
-            " $OR for ( var $VariableDeclaration in $Expression ) $Statement",
+            " $OR for ( var $VariableDeclarationNoIn in $Expression ) $Statement",
         "$ContinueStatement ::= continue ;" +
             " $OR continue $Identifier ;",
         "$BreakStatement ::= break ;" +

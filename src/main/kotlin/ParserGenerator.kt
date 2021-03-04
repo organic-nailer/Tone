@@ -32,9 +32,9 @@ class LALR1ParserGenerator(
             calcLALR1Map()
             calcTransition()
         }.run { println("Generated in $this ms") }
-        printClosureMap()
+        //printClosureMap()
         //printGotoMap()
-        printTransitionMap()
+        //printTransitionMap()
     }
 
     private fun calcLALR1Map() {
@@ -94,8 +94,9 @@ class LALR1ParserGenerator(
         //printTransitionMap()
         for(entry in closureMap) {
             entry.key.filter { r -> r.reducible }.forEach {
-                it.follow.forEach { token ->
+                for(token in it.follow) {
                     if(transitionMap.containsKey(entry.value to token)) {
+                        if(token == "else") continue //elseの競合はshift優先
                         throw Exception("SLR競合2 $token $entry")
                     }
                     transitionMap[entry.value to token] = TransitionData(

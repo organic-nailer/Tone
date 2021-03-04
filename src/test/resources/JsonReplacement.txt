@@ -1,4 +1,5 @@
 @babel/eslint-parserから生成
-(^\s*\"range\": \[\n.*\n.*\n.*\n)|(^\s*\"comments\": \[],\n)|(^\s*\"sourceType\".*\n)|(^\s*\"optional\".*\n)|(^\s*\"(start|end)\": \d*,\n) ->
+(^\s*\"range\": \[\n.*\n.*\n.*\n)|(^\s*\"comments\": \[],\n)|(^\s*\"sourceType\".*\n)|(^\s*\"optional\".*\n)|(^\s*\"(start|end)\": \d*,\n)|(^.*: null,?\n) ->
 \"value\": (.*), -> "value": "$1",
+"body": \{ -> "bodySingle": {
 ,(\n\s*}) -> $1
