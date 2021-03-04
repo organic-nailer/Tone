@@ -1,5 +1,13 @@
 @babel/eslint-parserから生成
-(^\s*\"range\": \[\n.*\n.*\n.*\n)|(^\s*\"comments\": \[],\n)|(^\s*\"sourceType\".*\n)|(^\s*\"optional\".*\n)|(^\s*\"(start|end)\": \d*,\n)|(^.*: null,?\n) ->
+(^\s*\"range\": \[\n.*\n.*\n.*\n)
+|(^\s*\"comments\": \[],\n)
+|(^\s*\"sourceType\".*\n)
+|(^\s*\"optional\".*\n)
+|(^\s*\"generator\".*\n)
+|(^\s*\"async\".*\n)
+|(^\s*\"expression\".*false.*\n)
+|(^\s*\"(start|end)\": \d*,\n)
+|(^.*: null,?\n) ->
 \"value\": (.*), -> "value": "$1",
 "body": \{ -> "bodySingle": {
 "consequent": \[ -> "consequents": [

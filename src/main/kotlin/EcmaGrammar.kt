@@ -75,6 +75,10 @@ object EcmaGrammar {
     const val Catch = "Catch"
     const val Finally = "Finally"
     const val DebuggerStatement = "DebuggerStatement"
+    const val FunctionDeclaration = "FunctionDeclaration"
+    const val FunctionExpression = "FunctionExpression"
+    const val FormalParameterList = "FormalParameterList"
+    const val FunctionBody = "FunctionBody"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
@@ -98,6 +102,7 @@ object EcmaGrammar {
             " $OR $ArrayLiteral" +
             " $OR ( $Expression )",
         "$MemberExpression ::= $PrimaryExpression" +
+            " $OR $FunctionExpression" +
             " $OR $MemberExpression [ $Expression ]" +
             " $OR new $MemberExpression $Arguments" +
             " $OR $MemberExpression . $Identifier",
@@ -262,9 +267,20 @@ object EcmaGrammar {
             " $OR $ThrowStatement" +
             " $OR $TryStatement" +
             " $OR $DebuggerStatement",
-        "$SourceElement ::= $Statement",
+        "$SourceElement ::= $Statement" +
+            " $OR $FunctionDeclaration",
         "$SourceElements ::= $SourceElement" +
             " $OR $SourceElements $SourceElement",
+        "$FunctionDeclaration ::= function $Identifier ( ) { $FunctionBody }" +
+            " $OR function $Identifier ( $FormalParameterList ) { $FunctionBody }",
+        "$FunctionExpression ::= function ( ) { $FunctionBody }" +
+            " $OR function ( $FormalParameterList ) { $FunctionBody }" +
+            " $OR function $Identifier ( ) { $FunctionBody }" +
+            " $OR function $Identifier ( $FormalParameterList ) { $FunctionBody }",
+        "$FormalParameterList ::= $Identifier" +
+            " $OR $FormalParameterList , $Identifier",
+        "$FunctionBody ::= ε" +
+            " $OR $SourceElements",
         "$Program ::= $SourceElements"
     )
     const val es5StartSymbol = Program

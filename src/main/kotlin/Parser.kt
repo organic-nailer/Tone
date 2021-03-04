@@ -133,6 +133,128 @@ class Parser {
                         body = bodyElements
                     )
                 }
+                EcmaGrammar.FunctionDeclaration -> {
+                    if(children.size == 7) {
+                        val bodyElements = mutableListOf<Node>()
+                        if(children[1].children.size == 1) {
+                            var node = children[1].children[0]
+                            while(true) {
+                                if(node.children.size == 1) {
+                                    bodyElements.add(0,node.children[0].toNode())
+                                    break
+                                }
+                                bodyElements.add(0,node.children[0].toNode())
+                                node = node.children[1]
+                            }
+                        }
+                        Node(
+                            type = NodeType.FunctionDeclaration,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            id = children[5].toNode(),
+                            params = listOf(),
+                            bodySingle = Node(
+                                type = NodeType.BlockStatement,
+                                loc = Location(
+                                    start = children[2].start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                body = bodyElements
+                            )
+                        )
+                    }
+                    else {
+                        val argList = mutableListOf<Node>()
+                        var node = children[4]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                argList.add(0,node.children[0].toNode())
+                                break
+                            }
+                            argList.add(0,node.children[0].toNode())
+                            node = node.children[2]
+                        }
+                        val bodyElements = mutableListOf<Node>()
+                        if(children[1].children.size == 1) {
+                            node = children[1].children[0]
+                            while(true) {
+                                if(node.children.size == 1) {
+                                    bodyElements.add(0,node.children[0].toNode())
+                                    break
+                                }
+                                bodyElements.add(0,node.children[0].toNode())
+                                node = node.children[1]
+                            }
+                        }
+                        Node(
+                            type = NodeType.FunctionDeclaration,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            id = children[6].toNode(),
+                            params = argList,
+                            bodySingle = Node(
+                                type = NodeType.BlockStatement,
+                                loc = Location(
+                                    start = children[2].start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                body = bodyElements
+                            )
+                        )
+                    }
+                }
+                EcmaGrammar.FunctionExpression -> {
+                    val bodyElements = mutableListOf<Node>()
+                    if(children[1].children.size == 1) {
+                        var node = children[1].children[0]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                bodyElements.add(0,node.children[0].toNode())
+                                break
+                            }
+                            bodyElements.add(0,node.children[0].toNode())
+                            node = node.children[1]
+                        }
+                    }
+                    val argList = mutableListOf<Node>()
+                    if(children[4].kind == EcmaGrammar.FormalParameterList) {
+                        var node = children[4]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                argList.add(0,node.children[0].toNode())
+                                break
+                            }
+                            argList.add(0,node.children[0].toNode())
+                            node = node.children[2]
+                        }
+                    }
+                    val identifier = if(children.size == 7 && children[5].kind == EcmaGrammar.Identifier) {
+                        children[5].toNode()
+                    } else if(children.size == 8 && children[6].kind == EcmaGrammar.Identifier) {
+                        children[6].toNode()
+                    } else null
+                    Node(
+                        type = NodeType.FunctionExpression,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        id = identifier,
+                        params = argList,
+                        bodySingle = Node(
+                            type = NodeType.BlockStatement,
+                            loc = Location(
+                                start = children[2].start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            body = bodyElements
+                        )
+                    )
+                }
                 EcmaGrammar.Block -> {
                     val bodyElements = mutableListOf<Node>()
                     var node = children[1]
@@ -958,6 +1080,7 @@ class Parser {
         val handler: Node? = null,
         val finalizer: Node? = null,
         val param: Node? = null,
+        val params: List<Node>? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
@@ -981,6 +1104,7 @@ class Parser {
         ReturnStatement, WithStatement, SwitchStatement,
         SwitchCase, LabeledStatement, ThrowStatement,
         TryStatement, CatchClause, DebuggerStatement,
+        FunctionDeclaration, FunctionExpression,
         UNKNOWN
     }
     @Serializable

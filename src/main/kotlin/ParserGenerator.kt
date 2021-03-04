@@ -30,9 +30,11 @@ class LALR1ParserGenerator(
     init {
         measureTimeMillis {
             calcLALR1Map()
+        }.run { println("LALR1Map calculated in $this ms") }
+        measureTimeMillis {
             calcTransition()
-        }.run { println("Generated in $this ms") }
-        //printClosureMap()
+        }.run { println("TransitionMap calculated in $this ms") }
+        printClosureMap()
         //printGotoMap()
         //printTransitionMap()
     }
@@ -97,6 +99,14 @@ class LALR1ParserGenerator(
                 for(token in it.follow) {
                     if(transitionMap.containsKey(entry.value to token)) {
                         if(token == "else") continue //elseの競合はshift優先
+                        //FunExprとFunDecの還元競合はFunDec優先
+                        if(it.left == EcmaGrammar.FunctionExpression) continue
+                        if(it.left == EcmaGrammar.FunctionDeclaration) {
+                            transitionMap[entry.value to token] = TransitionData(
+                                TransitionKind.REDUCE, null, it.toRule()
+                            )
+                            continue
+                        }
                         throw Exception("SLR競合2 $token $entry")
                     }
                     transitionMap[entry.value to token] = TransitionData(
@@ -206,9 +216,15 @@ class LR1ParserGenerator(
     val closureMap = mutableMapOf<Set<LR1ProductionRuleData>, String>()
 
     init {
-        calcTokenKind()
-        calcFirst()
-        calcGoto()
+        measureTimeMillis {
+            calcTokenKind()
+        }.run { println("Token calculated in $this ms") }
+        measureTimeMillis {
+            calcFirst()
+        }.run { println("FirstSet calculated in $this ms") }
+        measureTimeMillis {
+            calcGoto()
+        }.run { println("LR1GotoMap calculated in $this ms") }
     }
 
     private fun calcTokenKind() {
