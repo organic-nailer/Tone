@@ -209,4 +209,22 @@ class ParserTest {
             parsed
         )
     }
+
+    @Test
+    fun literalTest() {
+        val file = (ParserTest::class.java).classLoader.getResource("LiteralTest.js") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        val text = File(file.toURI()).readText()
+        val tokenizer = Tokenizer(text)
+        val parsed = parser.parse(tokenizer.tokenized) ?: ""
+
+        val jsonFile = (ParserTest::class.java).classLoader.getResource("LiteralTestExpected.json") ?: kotlin.run {
+            throw Exception("File not found")
+        }
+        assertJson(
+            File(jsonFile.toURI()).readText(),
+            parsed
+        )
+    }
 }

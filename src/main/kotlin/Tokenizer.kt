@@ -20,7 +20,7 @@ class Tokenizer(input: String) {
         "this","in","instanceof","typeof","void","delete","new","var",
         "if","else","while","for","continue","break","return",
         "with","switch","case","default","throw",
-        "try","catch","finally","debugger","function"
+        "try","catch","finally","debugger","function","get","set"
     )
     private val operators = mutableListOf<String>()
 

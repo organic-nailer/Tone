@@ -1,5 +1,6 @@
 package esTree
 
+import java.io.File
 import java.lang.Exception
 import kotlin.system.measureTimeMillis
 
@@ -31,10 +32,10 @@ class LALR1ParserGenerator(
         measureTimeMillis {
             calcLALR1Map()
         }.run { println("LALR1Map calculated in $this ms") }
+        printClosureMap()
         measureTimeMillis {
             calcTransition()
         }.run { println("TransitionMap calculated in $this ms") }
-        printClosureMap()
         //printGotoMap()
         //printTransitionMap()
     }
@@ -94,6 +95,7 @@ class LALR1ParserGenerator(
             }
         }
         //printTransitionMap()
+        val errorTransitions = mutableListOf<ErrorTransitionData>()
         for(entry in closureMap) {
             entry.key.filter { r -> r.reducible }.forEach {
                 for(token in it.follow) {
@@ -107,7 +109,10 @@ class LALR1ParserGenerator(
                             )
                             continue
                         }
-                        throw Exception("SLR競合2 $token $entry")
+                        errorTransitions.add(ErrorTransitionData(
+                            entry.value, token, TransitionData(TransitionKind.REDUCE, null, it.toRule())
+                        ))
+                        continue
                     }
                     transitionMap[entry.value to token] = TransitionData(
                         TransitionKind.REDUCE, null, it.toRule()
@@ -123,12 +128,28 @@ class LALR1ParserGenerator(
                 )
             }
         }
+        if(errorTransitions.isNotEmpty()) {
+            errorTransitions.forEach {
+                println(it)
+            }
+            printTransitionMap()
+            throw Exception("SLR競合2")
+        }
     }
 
+    data class ErrorTransitionData(val state: String, val token: String, val data: TransitionData)
+
     private fun printClosureMap() {
-        println("Closures")
-        closureMap.forEach { (t, u) ->
-            println("${u.padEnd(3)}: $t")
+        val file = File("D:\\tmp\\closureMap.txt")
+        try {
+            if(file.createNewFile()) {
+                println("Closures")
+                closureMap.forEach { (t, u) ->
+                    file.appendText("${u.padEnd(4)}: $t\n")
+                }
+            }
+        } catch(e: java.lang.Exception) {
+            println("closureMap書き込み失敗${e.message}")
         }
     }
 
@@ -148,19 +169,31 @@ class LALR1ParserGenerator(
         }
     }
 
+    fun csvEncode(text: String?): String {
+        if(text == null) return ""
+        return "\"${text.replace("\"","\"\"")}\""
+    }
+
     private fun printTransitionMap() {
-        println("Transition Table")
-        print("   ")
-        lr1ParserGenerator.terminalTokens.forEach { print(" ${it.take(3).padStart(3)} ") }
-        print("  $  ")
-        lr1ParserGenerator.nonTerminalTokens.forEach { print(" ${it.take(3).padStart(3)} ") }
-        print("\n")
-        for(c in closureMap.values) {
-            print(c.padEnd(3))
-            lr1ParserGenerator.terminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.take(3)?.padStart(3) ?: "   "} ") }
-            print(" ${transitionMap[c to "$"]?.toString()?.take(3)?.padStart(3) ?: "   "} ")
-            lr1ParserGenerator.nonTerminalTokens.forEach { print(" ${transitionMap[c to it]?.toString()?.take(3)?.padStart(3) ?: "   "} ") }
-            print("\n")
+        val file = File("D:\\tmp\\transitionMap.csv")
+        try {
+            if(file.createNewFile()) {
+                //file.appendText("Transition Table\n")
+                file.appendText(",")
+                lr1ParserGenerator.terminalTokens.forEach { file.appendText("${csvEncode(it)},") }
+                file.appendText("$,")
+                lr1ParserGenerator.nonTerminalTokens.forEach { file.appendText("${csvEncode(it)},") }
+                file.appendText("\n")
+                for(c in closureMap.values) {
+                    file.appendText("$c,")
+                    lr1ParserGenerator.terminalTokens.forEach { file.appendText("${csvEncode(transitionMap[c to it]?.toString())},") }
+                    file.appendText("${csvEncode(transitionMap[c to "$"]?.toString())},")
+                    lr1ParserGenerator.nonTerminalTokens.forEach { file.appendText("${csvEncode(transitionMap[c to it]?.toString())},") }
+                    file.appendText("\n")
+                }
+            }
+        } catch(e: java.lang.Exception) {
+            println("TransitionMap書き込み失敗${e.message}")
         }
     }
 

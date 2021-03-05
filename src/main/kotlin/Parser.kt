@@ -667,10 +667,13 @@ class Parser {
                 EcmaGrammar.Statement,
                 EcmaGrammar.Literal,
                 EcmaGrammar.LeftHandSideExpression,
+                EcmaGrammar.LeftHandSideExpressionForStmt,
                 EcmaGrammar.ExpressionNoIn,
+                EcmaGrammar.ExpressionForStmt,
                 EcmaGrammar.Expression -> {
                     children[0].toNode()
                 }
+                EcmaGrammar.AssignmentExpressionForStmt,
                 EcmaGrammar.AssignmentExpressionNoIn,
                 EcmaGrammar.AssignmentExpression -> {
                     if(children.size >= 2) {
@@ -689,6 +692,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.ConditionalExpressionForStmt,
                 EcmaGrammar.ConditionalExpressionNoIn,
                 EcmaGrammar.ConditionalExpression -> {
                     if(children.size == 5) {
@@ -707,6 +711,8 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.LogicalORExpressionForStmt,
+                EcmaGrammar.LogicalANDExpressionForStmt,
                 EcmaGrammar.LogicalANDExpressionNoIn,
                 EcmaGrammar.LogicalORExpressionNoIn,
                 EcmaGrammar.LogicalANDExpression,
@@ -727,6 +733,14 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.AdditiveExpressionForStmt,
+                EcmaGrammar.MultiplicativeExpressionForStmt,
+                EcmaGrammar.ShiftExpressionForStmt,
+                EcmaGrammar.RelationalExpressionForStmt,
+                EcmaGrammar.EqualityExpressionForStmt,
+                EcmaGrammar.BitwiseANDExpressionForStmt,
+                EcmaGrammar.BitwiseXORExpressionForStmt,
+                EcmaGrammar.BitwiseORExpressionForStmt,
                 EcmaGrammar.AdditiveExpression,
                 EcmaGrammar.MultiplicativeExpression,
                 EcmaGrammar.ShiftExpression,
@@ -756,6 +770,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.UnaryExpressionForStmt,
                 EcmaGrammar.UnaryExpression -> {
                     if(children.size >= 2) {
                         if(children[0].value == "++" || children[0].value == "--") {
@@ -786,6 +801,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.PostfixExpressionForStmt,
                 EcmaGrammar.PostfixExpression -> {
                     if(children.size >= 2) {
                         Node(
@@ -803,6 +819,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.NewExpressionForStmt,
                 EcmaGrammar.NewExpression -> {
                     if(children.size >= 2) {
                         Node(
@@ -819,6 +836,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.CallExpressionForStmt,
                 EcmaGrammar.CallExpression -> {
                     if(children.size == 4) {
                         Node(
@@ -879,6 +897,7 @@ class Parser {
                         }
                     }
                 }
+                EcmaGrammar.MemberExpressionForStmt,
                 EcmaGrammar.MemberExpression -> {
                     if(children.size == 4) {
                         Node(
@@ -942,6 +961,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
+                EcmaGrammar.PrimaryExpressionForStmt,
                 EcmaGrammar.PrimaryExpression -> {
                     if(children.size == 3) {
                         children[1].toNode()
@@ -982,6 +1002,152 @@ class Parser {
                         ),
                         elements = elements
                     )
+                }
+                EcmaGrammar.ObjectLiteral -> {
+                    if(children.size == 2) {
+                        Node(
+                            type = NodeType.ObjectExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            properties = listOf()
+                        )
+                    }
+                    else if(children.size == 3) {
+                        val propsList = mutableListOf<Node>()
+                        var node = children[1]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                propsList.add(0,node.children[0].toNode())
+                                break
+                            }
+                            propsList.add(0,node.children[0].toNode())
+                            node = node.children[2]
+                        }
+                        Node(
+                            type = NodeType.ObjectExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            properties = propsList
+                        )
+                    }
+                    else {
+                        val propsList = mutableListOf<Node>()
+                        var node = children[2]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                propsList.add(0,node.children[0].toNode())
+                                break
+                            }
+                            propsList.add(0,node.children[0].toNode())
+                            node = node.children[2]
+                        }
+                        Node(
+                            type = NodeType.ObjectExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            properties = propsList
+                        )
+                    }
+                }
+                EcmaGrammar.PropertyAssignment -> {
+                    if(children.size == 3) {
+                        Node(
+                            type = NodeType.Property,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            valueNode = children[0].toNode(),
+                            key = children[2].children[0].toNode(),
+                            kind = "init"
+                        )
+                    }
+                    else if(children.size == 7) {
+                        val bodyElements = mutableListOf<Node>()
+                        if(children[1].children.size == 1) {
+                            var node = children[1].children[0]
+                            while(true) {
+                                if(node.children.size == 1) {
+                                    bodyElements.add(0,node.children[0].toNode())
+                                    break
+                                }
+                                bodyElements.add(0,node.children[0].toNode())
+                                node = node.children[1]
+                            }
+                        }
+                        Node(
+                            type = NodeType.Property,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            valueNode = Node(
+                                type = NodeType.FunctionExpression,
+                                loc = Location(
+                                    start = children[4].start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                params = listOf(),
+                                bodySingle = Node(
+                                    type = NodeType.BlockStatement,
+                                    loc = Location(
+                                        start = children[2].start ?: Position(-1,-1),
+                                        end = this.end ?: Position(-1,-1)
+                                    ),
+                                    body = bodyElements
+                                )
+                            ),
+                            key = children[5].children[0].toNode(),
+                            kind = "get"
+                        )
+                    }
+                    else {
+                        val bodyElements = mutableListOf<Node>()
+                        if(children[1].children.size == 1) {
+                            var node = children[1].children[0]
+                            while(true) {
+                                if(node.children.size == 1) {
+                                    bodyElements.add(0,node.children[0].toNode())
+                                    break
+                                }
+                                bodyElements.add(0,node.children[0].toNode())
+                                node = node.children[1]
+                            }
+                        }
+                        Node(
+                            type = NodeType.Property,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            valueNode = Node(
+                                type = NodeType.FunctionExpression,
+                                loc = Location(
+                                    start = children[5].start ?: Position(-1,-1),
+                                    end = this.end ?: Position(-1,-1)
+                                ),
+                                params = listOf(
+                                    children[4].children[0].toNode()
+                                ),
+                                bodySingle = Node(
+                                    type = NodeType.BlockStatement,
+                                    loc = Location(
+                                        start = children[2].start ?: Position(-1,-1),
+                                        end = this.end ?: Position(-1,-1)
+                                    ),
+                                    body = bodyElements
+                                )
+                            ),
+                            key = children[6].children[0].toNode(),
+                            kind = "set"
+                        )
+                    }
                 }
                 EcmaGrammar.NumericLiteral -> {
                     Node(
@@ -1081,6 +1247,9 @@ class Parser {
         val finalizer: Node? = null,
         val param: Node? = null,
         val params: List<Node>? = null,
+        val properties: List<Node>? = null,
+        val valueNode: Node? = null,
+        val key: Node? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
@@ -1105,6 +1274,7 @@ class Parser {
         SwitchCase, LabeledStatement, ThrowStatement,
         TryStatement, CatchClause, DebuggerStatement,
         FunctionDeclaration, FunctionExpression,
+        ObjectExpression, Property,
         UNKNOWN
     }
     @Serializable

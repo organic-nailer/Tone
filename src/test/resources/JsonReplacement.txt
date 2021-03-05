@@ -5,10 +5,14 @@
 |(^\s*\"optional\".*\n)
 |(^\s*\"generator\".*\n)
 |(^\s*\"async\".*\n)
+|(^\s*\"method\".*\n)
+|(^\s*\"computed\".*\n)
+|(^\s*\"shorthand\".*\n)
 |(^\s*\"expression\".*false.*\n)
 |(^\s*\"(start|end)\": \d*,\n)
 |(^.*: null,?\n) ->
 \"value\": (.*), -> "value": "$1",
 "body": \{ -> "bodySingle": {
 "consequent": \[ -> "consequents": [
+"value": \{ -> "valueNode": {
 ,(\n\s*}) -> $1
