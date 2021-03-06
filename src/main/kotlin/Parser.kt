@@ -1,6 +1,5 @@
 package esTree
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,7 +12,7 @@ class Parser {
     )
 
     fun parse(input: List<Tokenizer.TokenData>): String? {
-        var node: Node? = null
+        var node: Node?
         measureTimeMillis {
             val preTree = parseInternal(input) ?: return null
             node = preTree.toNode()
@@ -23,29 +22,76 @@ class Parser {
         return json
     }
 
+    enum class ASIState {
+        WAIT_SHIFT, EXPECT_REDUCE, NONE
+    }
+
     private fun parseInternal(input: List<Tokenizer.TokenData>): NodeInternal? {
         println("input: ${input.joinToString("")}")
+        val inputMut = input.toMutableList()
         val stack = ArrayDeque<Pair<String,String>>()// state,token
         val nodeStack = ArrayDeque<NodeInternal>()
         var parseIndex = 0
         var accepted = false
+        var previousIsLineTerminator: Tokenizer.TokenData? = null
+        var asiState = ASIState.NONE
         stack.addFirst("J0" to "")
-        while(parseIndex < input.size || stack.isNotEmpty()) {
-            println("now: ${stack.first().first} to ${input.getOrNull(parseIndex)?.kind}")
-            val transition = parserGenerator.transitionMap[stack.first().first to input[parseIndex].kind]
+        while(parseIndex < inputMut.size || stack.isNotEmpty()) {
+            println("now: ${stack.first().first} to ${inputMut.getOrNull(parseIndex)?.kind}")
+            if(inputMut[parseIndex].kind == EcmaGrammar.LineTerminator) {
+                previousIsLineTerminator = inputMut[parseIndex]
+                parseIndex++
+                continue
+            }
+            val transition = parserGenerator.transitionMap[stack.first().first to inputMut[parseIndex].kind]
+            if(transition?.kind == LALR1ParserGenerator.TransitionKind.SHIFT
+                && previousIsLineTerminator != null) {
+                //自動セミコロン挿入(Restricted Token)
+                println("!!!!${stack.first()} .. ${inputMut[parseIndex].kind}")
+                if(((stack.first().second == EcmaGrammar.LeftHandSideExpression
+                        || stack.first().second == EcmaGrammar.LeftHandSideExpressionForStmt)
+                    && (inputMut[parseIndex].kind == "++" || inputMut[parseIndex].kind == "--"))
+                    || stack.first().second == "continue"
+                    || stack.first().second == "break"
+                    || stack.first().second == "return") {
+                    val prev = inputMut.take(parseIndex).findLast { it.kind != EcmaGrammar.LineTerminator }
+                    inputMut.add(parseIndex, Tokenizer.TokenData(
+                        ";",";",
+                        prev?.startLine ?: 1,
+                        (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
+                    ))
+                    previousIsLineTerminator = null
+                    asiState = ASIState.WAIT_SHIFT
+                    println("ASI: $parseIndex => $inputMut")
+                    continue
+                }
+            }
             when(transition?.kind) {
                 LALR1ParserGenerator.TransitionKind.SHIFT -> {
-                    stack.addFirst(transition.value!! to input[parseIndex].kind)
+                    if(asiState == ASIState.EXPECT_REDUCE) {
+                        throw Exception("パースエラー($asiState): $stack, $parseIndex")
+                    }
+                    stack.addFirst(transition.value!! to inputMut[parseIndex].kind)
                     nodeStack.addFirst(NodeInternal(
                         stack.first().second,
-                        input[parseIndex].raw,
+                        inputMut[parseIndex].raw,
                         mutableListOf(),
-                        Position(input[parseIndex].startLine, input[parseIndex].startIndex),
-                        Position(input[parseIndex].startLine, input[parseIndex].startIndex + input[parseIndex].raw.length)
+                        Position(inputMut[parseIndex].startLine, inputMut[parseIndex].startIndex),
+                        Position(inputMut[parseIndex].startLine, inputMut[parseIndex].startIndex + inputMut[parseIndex].raw.length)
                     ))
+                    previousIsLineTerminator = null
                     parseIndex++
+                    if(asiState == ASIState.WAIT_SHIFT) {
+                        asiState = ASIState.EXPECT_REDUCE
+                    }
                 }
                 LALR1ParserGenerator.TransitionKind.REDUCE -> {
+                    if(asiState == ASIState.EXPECT_REDUCE) {
+                        if(transition.rule?.left == EcmaGrammar.EmptyStatement) {
+                            throw Exception("パースエラー($asiState): $stack, $parseIndex")
+                        }
+                        asiState = ASIState.NONE
+                    }
                     val rule = transition.rule!!
                     val newNode = NodeInternal(rule.left, null, mutableListOf(), null, nodeStack.first().end)
                     var startStack = nodeStack.first()
@@ -72,6 +118,34 @@ class Parser {
                     break
                 }
                 else -> {
+                    if(previousIsLineTerminator != null) {
+                        //当該トークンの前に改行がある
+                        val prev = inputMut.take(parseIndex).findLast { it.kind != EcmaGrammar.LineTerminator }
+                        //inputMut.getOrNull(parseIndex-1)
+                        inputMut.add(parseIndex, Tokenizer.TokenData(
+                            ";",";",
+                            prev?.startLine ?: 1,
+                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
+                        ))
+                        previousIsLineTerminator = null
+                        asiState = ASIState.WAIT_SHIFT
+                        println("ASI: $parseIndex => $inputMut")
+                        continue
+                    }
+                    else if(inputMut[parseIndex].kind == "}" || inputMut[parseIndex].kind == "$") {
+                        //当該トークンが閉じ中括弧である
+                        //or ファイル末尾で解釈不能
+                        val prev = inputMut.take(parseIndex).findLast { it.kind != EcmaGrammar.LineTerminator }
+                        inputMut.add(parseIndex, Tokenizer.TokenData(
+                            ";",";",
+                            prev?.startLine ?: 1,
+                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
+                        ))
+                        previousIsLineTerminator = null
+                        asiState = ASIState.WAIT_SHIFT
+                        println("ASI: $parseIndex => $inputMut")
+                        continue
+                    }
                     throw Exception("パースエラー: $stack, $parseIndex")
                 }
             }
@@ -773,7 +847,7 @@ class Parser {
                 EcmaGrammar.UnaryExpressionForStmt,
                 EcmaGrammar.UnaryExpression -> {
                     if(children.size >= 2) {
-                        if(children[0].value == "++" || children[0].value == "--") {
+                        if(children[1].value == "++" || children[1].value == "--") {
                             Node(
                                 type = NodeType.UpdateExpression,
                                 loc = Location(

@@ -38,10 +38,14 @@ class Tokenizer(input: String) {
         loopMain@ while(true) {
             val next = reader.getNextChar()
             if(next == CharReader.EOF) break
-            if(next.isWhitespace()) continue
             val lineNumber = reader.lineNumber
             val lineIndex = reader.index
             //println("now $next $lineIndex")
+            if(next == CharReader.LINE_TERMINATOR) {
+                res.add(TokenData(next.toString(),EcmaGrammar.LineTerminator, lineNumber, lineIndex))
+                continue
+            }
+            if(next.isWhitespace()) continue
             if(next.isDigit()) {
                 val d = reader.readNumber()
                 if(d != null) {

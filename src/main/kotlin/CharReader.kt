@@ -9,10 +9,11 @@ class CharReader(
 ) {
     companion object {
         private const val EOFInt = 26
-        val EOF = EOFInt.toChar()
+        const val EOF = EOFInt.toChar()
+        const val LINE_TERMINATOR = '\n'
     }
 
-    private val inputStrs = inputStr?.split("\n") ?: listOf()
+    private val inputStrings = inputStr?.split("\n") ?: listOf()
     private var inputIndex = 0
 
     private var line = ""
@@ -24,13 +25,13 @@ class CharReader(
         if(index + 1 < lineLength) {
             return line[++index]
         }
-        if(++index == lineLength - 1) {
-            return '\n'
+        if(++index == lineLength && (reader != null || inputStrings.size != inputIndex)) {
+            return LINE_TERMINATOR
         }
 
         try {
-            if(reader == null && inputStrs.size == inputIndex) return EOF
-            line = reader?.readLine() ?: inputStrs[inputIndex++]
+            if(reader == null && inputStrings.size == inputIndex) return EOF
+            line = reader?.readLine() ?: inputStrings[inputIndex++]
             lineNumber++
             lineLength = line.length
             index = -1

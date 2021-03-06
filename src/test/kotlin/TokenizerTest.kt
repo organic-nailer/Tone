@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 class TokenizerTest {
     @Test
     fun charReaderTest() {
-        val reader = CharReader(null, "1234==hello_2")
+        val reader = CharReader(null, "1234==\nhello_2")
         assertEquals('1',reader.getNextChar())
         assertEquals(0, reader.index)
         assertEquals("1234",reader.readNumber())
@@ -14,9 +14,12 @@ class TokenizerTest {
         assertEquals('=',reader.getNextChar())
         assertEquals(true,reader.prefixMatch("=="))
         reader.index += 1
+        assertEquals('\n',reader.getNextChar())
         assertEquals('h',reader.getNextChar())
         assertEquals("hello_2",reader.readIdentifier())
-        assertEquals(12,reader.index)
+        assertEquals(6,reader.index)
+        assertEquals(2,reader.lineNumber)
+        assertEquals(CharReader.EOF,reader.getNextChar())
     }
 
     @Test

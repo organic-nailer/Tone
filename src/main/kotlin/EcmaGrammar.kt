@@ -104,6 +104,7 @@ object EcmaGrammar {
     const val PropertyAssignment = "PropertyAssignment"
     const val PropertyName = "PropertyName"
     const val PropertySetParameterList = "PropertySetParameterList"
+    const val LineTerminator = "LineTerminator"
     private const val OR = "|/"
 
     val es5Grammar = listOf(
