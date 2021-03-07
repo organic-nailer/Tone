@@ -37,7 +37,9 @@ class LALR1ParserGenerator(
             calcTransition()
         }.run { println("TransitionMap calculated in $this ms") }
         //printGotoMap()
-        //printTransitionMap()
+        printTransitionMap()
+        println("Closure size = ${closureMap.size}")
+        println("Transition size = ${transitionMap.size}")
     }
 
     private fun calcLALR1Map() {

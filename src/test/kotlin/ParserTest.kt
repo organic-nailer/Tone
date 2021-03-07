@@ -1,7 +1,6 @@
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.flipkart.zjsonpatch.JsonDiff
-import esTree.Parser
-import esTree.Tokenizer
+import esTree.*
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.File
@@ -11,10 +10,10 @@ import kotlin.test.assertEquals
 import kotlin.test.Test
 
 class ParserTest {
-    private val parser: Parser = Parser()
 
     @Test
     fun parseNumber() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("35")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -25,6 +24,7 @@ class ParserTest {
 
     @Test
     fun parseAddition() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("33 + 4")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -35,6 +35,7 @@ class ParserTest {
 
     @Test
     fun parseMultiAddition() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("3 + 3 + 4")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -45,6 +46,7 @@ class ParserTest {
 
     @Test
     fun parseSub() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("33 - 4")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -55,6 +57,7 @@ class ParserTest {
 
     @Test
     fun parseBinaryExpr() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("1 + 2 * 3 >> 4 & 5 != 6 > 7 instanceof 8")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -62,6 +65,7 @@ class ParserTest {
 
     @Test
     fun parseLogicExpr() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("1 + 2 && 3")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -69,6 +73,7 @@ class ParserTest {
 
     @Test
     fun parseUnary() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("+ 1 + 2 ++")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -76,6 +81,7 @@ class ParserTest {
 
     @Test
     fun parseNull() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("1 = null")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -83,6 +89,7 @@ class ParserTest {
 
     @Test
     fun parseBool() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("1 = new true")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -90,6 +97,7 @@ class ParserTest {
 
     @Test
     fun parseCall() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("1 ( 2 ) [ 3 ]")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -97,6 +105,7 @@ class ParserTest {
 
     @Test
     fun parseIdentifier() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("hello.world=334")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -104,6 +113,7 @@ class ParserTest {
 
     @Test
     fun parseArray() {
+        val parser: Parser = Parser()
         var parsed = parser.parse(Tokenizer("[]").tokenized)
         parsed = parser.parse(Tokenizer("[1]").tokenized)
         parsed = parser.parse(Tokenizer("[1,]").tokenized)
@@ -114,6 +124,7 @@ class ParserTest {
 
     @Test
     fun parseProgram() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("x=2;y=3;")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -121,6 +132,7 @@ class ParserTest {
 
     @Test
     fun parseBlock() {
+        val parser: Parser = Parser()
         val tokenizer = Tokenizer("{x=2;}")
         val parsed = parser.parse(tokenizer.tokenized)
         assert(true)
@@ -128,6 +140,7 @@ class ParserTest {
 
     @Test
     fun importFileTest() {
+        val parser: Parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("Hoge.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -149,6 +162,7 @@ class ParserTest {
 
     @Test
     fun expressionTest() {
+        val parser: Parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("ExpressionTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -176,6 +190,7 @@ class ParserTest {
 
     @Test
     fun statementTest() {
+        val parser: Parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("StatementTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -194,6 +209,7 @@ class ParserTest {
 
     @Test
     fun functionTest() {
+        val parser: Parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("FunctionTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -212,6 +228,7 @@ class ParserTest {
 
     @Test
     fun literalTest() {
+        val parser: Parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("LiteralTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -230,6 +247,7 @@ class ParserTest {
 
     @Test
     fun asiTest() {
+        val parser: Parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("ASITest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -243,6 +261,28 @@ class ParserTest {
         assertJson(
             File(jsonFile.toURI()).readText(),
             parsed
+        )
+    }
+
+    @Test
+    fun lr0Test() {
+        val parserGenerator = LR0ParserGenerator(
+            EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
+            EcmaGrammar.es5StartSymbol
+        )
+        //parserGenerator.printClosureMap()
+        //parserGenerator.printGotoMap()
+    }
+
+    fun String.tokenize(): List<String> {
+        return this.split(" ")
+    }
+
+    @Test
+    fun generatorTest() {
+        val generator = DragonParserGenerator(
+            EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
+            EcmaGrammar.es5StartSymbol
         )
     }
 }

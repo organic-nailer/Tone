@@ -6,8 +6,8 @@ import kotlinx.serialization.json.Json
 import kotlin.system.measureTimeMillis
 
 class Parser {
-    private val parserGenerator = LALR1ParserGenerator(
-        EcmaGrammar.grammarParser(EcmaGrammar.es5Grammar),
+    private val parserGenerator = DragonParserGenerator(
+        EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
         EcmaGrammar.es5StartSymbol
     )
 
@@ -35,7 +35,7 @@ class Parser {
         var accepted = false
         var previousIsLineTerminator: Tokenizer.TokenData? = null
         var asiState = ASIState.NONE
-        stack.addFirst("J0" to "")
+        stack.addFirst("I0" to "")
         while(parseIndex < inputMut.size || stack.isNotEmpty()) {
             println("now: ${stack.first().first} to ${inputMut.getOrNull(parseIndex)?.kind}")
             if(inputMut[parseIndex].kind == EcmaGrammar.LineTerminator) {
@@ -44,7 +44,7 @@ class Parser {
                 continue
             }
             val transition = parserGenerator.transitionMap[stack.first().first to inputMut[parseIndex].kind]
-            if(transition?.kind == LALR1ParserGenerator.TransitionKind.SHIFT
+            if(transition?.kind == DragonParserGenerator.TransitionKind.SHIFT
                 && previousIsLineTerminator != null) {
                 //自動セミコロン挿入(Restricted Token)
                 println("!!!!${stack.first()} .. ${inputMut[parseIndex].kind}")
@@ -67,7 +67,7 @@ class Parser {
                 }
             }
             when(transition?.kind) {
-                LALR1ParserGenerator.TransitionKind.SHIFT -> {
+                DragonParserGenerator.TransitionKind.SHIFT -> {
                     if(asiState == ASIState.EXPECT_REDUCE) {
                         throw Exception("パースエラー($asiState): $stack, $parseIndex")
                     }
@@ -85,7 +85,7 @@ class Parser {
                         asiState = ASIState.EXPECT_REDUCE
                     }
                 }
-                LALR1ParserGenerator.TransitionKind.REDUCE -> {
+                DragonParserGenerator.TransitionKind.REDUCE -> {
                     if(asiState == ASIState.EXPECT_REDUCE) {
                         if(transition.rule?.left == EcmaGrammar.EmptyStatement) {
                             throw Exception("パースエラー($asiState): $stack, $parseIndex")
@@ -113,7 +113,7 @@ class Parser {
                     newNode.start = startStack.start ?: Position(1,0)
                     nodeStack.addFirst(newNode)
                 }
-                LALR1ParserGenerator.TransitionKind.ACCEPT -> {
+                DragonParserGenerator.TransitionKind.ACCEPT -> {
                     accepted = true
                     break
                 }

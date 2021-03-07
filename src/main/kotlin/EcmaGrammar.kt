@@ -408,4 +408,20 @@ object EcmaGrammar {
         }
         return result
     }
+
+    fun grammarParserForLR0(grammar: List<String>): List<LR0ParserGenerator.ProductionRuleData> {
+        val result = mutableListOf<LR0ParserGenerator.ProductionRuleData>()
+        for(g in grammar) {
+            val s = g.split(" ::= ")
+            val left = s.first()
+            val right = s[1].split(" $OR ")
+            for(r in right) {
+                result.add(
+                    LR0ParserGenerator.ProductionRuleData(
+                        left, r.split(" ").filter { it.isNotBlank() }
+                    ))
+            }
+        }
+        return result
+    }
 }
