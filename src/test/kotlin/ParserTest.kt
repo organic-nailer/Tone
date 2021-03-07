@@ -2,10 +2,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.flipkart.zjsonpatch.JsonDiff
 import esTree.*
 import kotlinx.serialization.json.Json
-import java.io.BufferedReader
 import java.io.File
-import java.io.Reader
-import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.Test
 
@@ -268,7 +265,7 @@ class ParserTest {
     fun lr0Test() {
         val parserGenerator = LR0ParserGenerator(
             EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
-            EcmaGrammar.es5StartSymbol
+            EcmaGrammar.es5StartSymbol.ordinal
         )
         //parserGenerator.printClosureMap()
         //parserGenerator.printGotoMap()
@@ -282,7 +279,7 @@ class ParserTest {
     fun generatorTest() {
         val generator = DragonParserGenerator(
             EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
-            EcmaGrammar.es5StartSymbol
+            EcmaGrammar.es5StartSymbol.ordinal
         )
     }
 }

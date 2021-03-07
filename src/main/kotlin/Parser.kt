@@ -1,14 +1,16 @@
 package esTree
 
+import EcmaGrammar
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.system.measureTimeMillis
+import EcmaGrammar.Symbols.*
 
 class Parser {
     private val parserGenerator = DragonParserGenerator(
         EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
-        EcmaGrammar.es5StartSymbol
+        EcmaGrammar.es5StartSymbol.ordinal
     )
 
     fun parse(input: List<Tokenizer.TokenData>): String? {
@@ -29,16 +31,16 @@ class Parser {
     private fun parseInternal(input: List<Tokenizer.TokenData>): NodeInternal? {
         println("input: ${input.joinToString("")}")
         val inputMut = input.toMutableList()
-        val stack = ArrayDeque<Pair<String,String>>()// state,token
+        val stack = ArrayDeque<Pair<String,Int>>()// state,token
         val nodeStack = ArrayDeque<NodeInternal>()
         var parseIndex = 0
         var accepted = false
         var previousIsLineTerminator: Tokenizer.TokenData? = null
         var asiState = ASIState.NONE
-        stack.addFirst("I0" to "")
+        stack.addFirst("I0" to 0)
         while(parseIndex < inputMut.size || stack.isNotEmpty()) {
             println("now: ${stack.first().first} to ${inputMut.getOrNull(parseIndex)?.kind}")
-            if(inputMut[parseIndex].kind == EcmaGrammar.LineTerminator) {
+            if(inputMut[parseIndex].kind == LineTerminator.ordinal) {
                 previousIsLineTerminator = inputMut[parseIndex]
                 parseIndex++
                 continue
@@ -48,15 +50,15 @@ class Parser {
                 && previousIsLineTerminator != null) {
                 //自動セミコロン挿入(Restricted Token)
                 println("!!!!${stack.first()} .. ${inputMut[parseIndex].kind}")
-                if(((stack.first().second == EcmaGrammar.LeftHandSideExpression
-                        || stack.first().second == EcmaGrammar.LeftHandSideExpressionForStmt)
-                    && (inputMut[parseIndex].kind == "++" || inputMut[parseIndex].kind == "--"))
-                    || stack.first().second == "continue"
-                    || stack.first().second == "break"
-                    || stack.first().second == "return") {
-                    val prev = inputMut.take(parseIndex).findLast { it.kind != EcmaGrammar.LineTerminator }
+                if(((stack.first().second == LeftHandSideExpression.ordinal
+                        || stack.first().second == LeftHandSideExpressionForStmt.ordinal)
+                    && (inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["++"] || inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["--"]))
+                    || stack.first().second == EcmaGrammar.operatorsMap["continue"]
+                    || stack.first().second == EcmaGrammar.operatorsMap["break"]
+                    || stack.first().second == EcmaGrammar.operatorsMap["return"]) {
+                    val prev = inputMut.take(parseIndex).findLast { it.kind != LineTerminator.ordinal }
                     inputMut.add(parseIndex, Tokenizer.TokenData(
-                        ";",";",
+                        ";", EcmaGrammar.operatorsMap[";"]!!,
                         prev?.startLine ?: 1,
                         (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
                     ))
@@ -87,7 +89,7 @@ class Parser {
                 }
                 DragonParserGenerator.TransitionKind.REDUCE -> {
                     if(asiState == ASIState.EXPECT_REDUCE) {
-                        if(transition.rule?.left == EcmaGrammar.EmptyStatement) {
+                        if(transition.rule?.left == EmptyStatement.ordinal) {
                             throw Exception("パースエラー($asiState): $stack, $parseIndex")
                         }
                         asiState = ASIState.NONE
@@ -120,10 +122,10 @@ class Parser {
                 else -> {
                     if(previousIsLineTerminator != null) {
                         //当該トークンの前に改行がある
-                        val prev = inputMut.take(parseIndex).findLast { it.kind != EcmaGrammar.LineTerminator }
+                        val prev = inputMut.take(parseIndex).findLast { it.kind != LineTerminator.ordinal }
                         //inputMut.getOrNull(parseIndex-1)
                         inputMut.add(parseIndex, Tokenizer.TokenData(
-                            ";",";",
+                            ";", EcmaGrammar.operatorsMap[";"]!!,
                             prev?.startLine ?: 1,
                             (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
                         ))
@@ -132,12 +134,12 @@ class Parser {
                         println("ASI: $parseIndex => $inputMut")
                         continue
                     }
-                    else if(inputMut[parseIndex].kind == "}" || inputMut[parseIndex].kind == "$") {
+                    else if(inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["}"] || inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["$"]) {
                         //当該トークンが閉じ中括弧である
                         //or ファイル末尾で解釈不能
-                        val prev = inputMut.take(parseIndex).findLast { it.kind != EcmaGrammar.LineTerminator }
+                        val prev = inputMut.take(parseIndex).findLast { it.kind != LineTerminator.ordinal }
                         inputMut.add(parseIndex, Tokenizer.TokenData(
-                            ";",";",
+                            ";", EcmaGrammar.operatorsMap[";"]!!,
                             prev?.startLine ?: 1,
                             (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
                         ))
@@ -160,7 +162,7 @@ class Parser {
     }
 
     data class NodeInternal(
-        val kind: String,
+        val kind: Int,
         val value: String?,
         val children: MutableList<NodeInternal>,
         var start: Position?,
@@ -187,7 +189,7 @@ class Parser {
 
         fun toNode(): Node {
             return when(kind) {
-                EcmaGrammar.Program -> {
+                Program.ordinal -> {
                     val bodyElements = mutableListOf<Node>()
                     var node = children[0]
                     while(true) {
@@ -207,7 +209,7 @@ class Parser {
                         body = bodyElements
                     )
                 }
-                EcmaGrammar.FunctionDeclaration -> {
+                FunctionDeclaration.ordinal -> {
                     if(children.size == 7) {
                         val bodyElements = mutableListOf<Node>()
                         if(children[1].children.size == 1) {
@@ -281,7 +283,7 @@ class Parser {
                         )
                     }
                 }
-                EcmaGrammar.FunctionExpression -> {
+                FunctionExpression.ordinal -> {
                     val bodyElements = mutableListOf<Node>()
                     if(children[1].children.size == 1) {
                         var node = children[1].children[0]
@@ -295,7 +297,7 @@ class Parser {
                         }
                     }
                     val argList = mutableListOf<Node>()
-                    if(children[4].kind == EcmaGrammar.FormalParameterList) {
+                    if(children[4].kind == FormalParameterList.ordinal) {
                         var node = children[4]
                         while(true) {
                             if(node.children.size == 1) {
@@ -306,9 +308,9 @@ class Parser {
                             node = node.children[2]
                         }
                     }
-                    val identifier = if(children.size == 7 && children[5].kind == EcmaGrammar.Identifier) {
+                    val identifier = if(children.size == 7 && children[5].kind == Identifier.ordinal) {
                         children[5].toNode()
-                    } else if(children.size == 8 && children[6].kind == EcmaGrammar.Identifier) {
+                    } else if(children.size == 8 && children[6].kind == Identifier.ordinal) {
                         children[6].toNode()
                     } else null
                     Node(
@@ -329,7 +331,7 @@ class Parser {
                         )
                     )
                 }
-                EcmaGrammar.Block -> {
+                Block.ordinal -> {
                     val bodyElements = mutableListOf<Node>()
                     var node = children[1]
                     while(true) {
@@ -349,7 +351,7 @@ class Parser {
                         body = bodyElements
                     )
                 }
-                EcmaGrammar.VariableStatement -> {
+                VariableStatement.ordinal -> {
                     val decsElements = mutableListOf<Node>()
                     var node = children[1]
                     while(true) {
@@ -370,7 +372,7 @@ class Parser {
                         kind = "var"
                     )
                 }
-                EcmaGrammar.IfStatement -> {
+                IfStatement.ordinal -> {
                     if(children.size == 7) {
                         Node(
                             type = NodeType.IfStatement,
@@ -396,7 +398,7 @@ class Parser {
                         )
                     }
                 }
-                EcmaGrammar.IterationStatement -> {
+                IterationStatement.ordinal -> {
                     if(children.size == 7 && children[6].value == "do") {
                         Node(
                             type = NodeType.DoWhileStatement,
@@ -499,8 +501,8 @@ class Parser {
                         )
                     }
                 }
-                EcmaGrammar.VariableDeclarationNoIn,
-                EcmaGrammar.VariableDeclaration -> {
+                VariableDeclarationNoIn.ordinal,
+                VariableDeclaration.ordinal -> {
                     if(children.size == 2) {
                         Node(
                             type = NodeType.VariableDeclarator,
@@ -523,7 +525,7 @@ class Parser {
                         )
                     }
                 }
-                EcmaGrammar.EmptyStatement -> {
+                EmptyStatement.ordinal -> {
                     Node(
                         type = NodeType.EmptyStatement,
                         loc = Location(
@@ -532,7 +534,7 @@ class Parser {
                         ),
                     )
                 }
-                EcmaGrammar.ExpressionStatement -> {
+                ExpressionStatement.ordinal -> {
                     Node(
                         type = NodeType.ExpressionStatement,
                         loc = Location(
@@ -542,7 +544,7 @@ class Parser {
                         expression = children[1].toNode()
                     )
                 }
-                EcmaGrammar.ContinueStatement -> {
+                ContinueStatement.ordinal -> {
                     Node(
                         type = NodeType.ContinueStatement,
                         loc = Location(
@@ -552,7 +554,7 @@ class Parser {
                         label = if(children.size == 3) children[1].toNode() else null
                     )
                 }
-                EcmaGrammar.BreakStatement -> {
+                BreakStatement.ordinal -> {
                     Node(
                         type = NodeType.BreakStatement,
                         loc = Location(
@@ -562,7 +564,7 @@ class Parser {
                         label = if(children.size == 3) children[1].toNode() else null
                     )
                 }
-                EcmaGrammar.ReturnStatement -> {
+                ReturnStatement.ordinal -> {
                     Node(
                         type = NodeType.ReturnStatement,
                         loc = Location(
@@ -572,7 +574,7 @@ class Parser {
                         argument = if(children.size == 3) children[1].toNode() else null
                     )
                 }
-                EcmaGrammar.WithStatement -> {
+                WithStatement.ordinal -> {
                     Node(
                         type = NodeType.WithStatement,
                         loc = Location(
@@ -583,11 +585,11 @@ class Parser {
                         bodySingle = children[0].toNode()
                     )
                 }
-                EcmaGrammar.SwitchStatement -> {
+                SwitchStatement.ordinal -> {
                     val cases = mutableListOf<Node>()
                     children[0].children.forEach { c ->
                         when(c.kind) {
-                            EcmaGrammar.CaseClauses -> {
+                            CaseClauses.ordinal -> {
                                 var node = c
                                 while(true) {
                                     if(node.children.size == 1) {
@@ -598,7 +600,7 @@ class Parser {
                                     node = node.children[1]
                                 }
                             }
-                            EcmaGrammar.DefaultClause -> {
+                            DefaultClause.ordinal -> {
                                 cases.add(0,c.toNode())
                             }
                         }
@@ -613,7 +615,7 @@ class Parser {
                         cases = cases
                     )
                 }
-                EcmaGrammar.CaseClause -> {
+                CaseClause.ordinal -> {
                     val consequents = mutableListOf<Node>()
                     if(children.size == 4) {
                         var node = children[0]
@@ -636,7 +638,7 @@ class Parser {
                         consequents = consequents
                     )
                 }
-                EcmaGrammar.DefaultClause -> {
+                DefaultClause.ordinal -> {
                     val consequents = mutableListOf<Node>()
                     if(children.size == 3) {
                         var node = children[0]
@@ -659,7 +661,7 @@ class Parser {
                         consequents = consequents
                     )
                 }
-                EcmaGrammar.LabelledStatement -> {
+                LabelledStatement.ordinal -> {
                     Node(
                         type = NodeType.LabeledStatement,
                         loc = Location(
@@ -670,7 +672,7 @@ class Parser {
                         bodySingle = children[0].toNode()
                     )
                 }
-                EcmaGrammar.ThrowStatement -> {
+                ThrowStatement.ordinal -> {
                     Node(
                         type = NodeType.ThrowStatement,
                         loc = Location(
@@ -680,8 +682,8 @@ class Parser {
                         argument = children[1].toNode()
                     )
                 }
-                EcmaGrammar.TryStatement -> {
-                    if(children.size == 3 && children[0].kind == EcmaGrammar.Catch) {
+                TryStatement.ordinal -> {
+                    if(children.size == 3 && children[0].kind == Catch.ordinal) {
                         Node(
                             type = NodeType.TryStatement,
                             loc = Location(
@@ -716,7 +718,7 @@ class Parser {
                         )
                     }
                 }
-                EcmaGrammar.Catch -> {
+                Catch.ordinal -> {
                     Node(
                         type = NodeType.CatchClause,
                         loc = Location(
@@ -727,7 +729,7 @@ class Parser {
                         bodySingle = children[0].toNode()
                     )
                 }
-                EcmaGrammar.DebuggerStatement -> {
+                DebuggerStatement.ordinal -> {
                     Node(
                         type = NodeType.DebuggerStatement,
                         loc = Location(
@@ -736,20 +738,20 @@ class Parser {
                         )
                     )
                 }
-                EcmaGrammar.Finally,
-                EcmaGrammar.SourceElement,
-                EcmaGrammar.Statement,
-                EcmaGrammar.Literal,
-                EcmaGrammar.LeftHandSideExpression,
-                EcmaGrammar.LeftHandSideExpressionForStmt,
-                EcmaGrammar.ExpressionNoIn,
-                EcmaGrammar.ExpressionForStmt,
-                EcmaGrammar.Expression -> {
+                Finally.ordinal,
+                SourceElement.ordinal,
+                Statement.ordinal,
+                Literal.ordinal,
+                LeftHandSideExpression.ordinal,
+                LeftHandSideExpressionForStmt.ordinal,
+                ExpressionNoIn.ordinal,
+                ExpressionForStmt.ordinal,
+                Expression.ordinal -> {
                     children[0].toNode()
                 }
-                EcmaGrammar.AssignmentExpressionForStmt,
-                EcmaGrammar.AssignmentExpressionNoIn,
-                EcmaGrammar.AssignmentExpression -> {
+                AssignmentExpressionForStmt.ordinal,
+                AssignmentExpressionNoIn.ordinal,
+                AssignmentExpression.ordinal -> {
                     if(children.size >= 2) {
                         Node(
                             type = NodeType.AssignmentExpression,
@@ -766,9 +768,9 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.ConditionalExpressionForStmt,
-                EcmaGrammar.ConditionalExpressionNoIn,
-                EcmaGrammar.ConditionalExpression -> {
+                ConditionalExpressionForStmt.ordinal,
+                ConditionalExpressionNoIn.ordinal,
+                ConditionalExpression.ordinal -> {
                     if(children.size == 5) {
                         Node(
                             type = NodeType.ConditionalExpression,
@@ -785,12 +787,12 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.LogicalORExpressionForStmt,
-                EcmaGrammar.LogicalANDExpressionForStmt,
-                EcmaGrammar.LogicalANDExpressionNoIn,
-                EcmaGrammar.LogicalORExpressionNoIn,
-                EcmaGrammar.LogicalANDExpression,
-                EcmaGrammar.LogicalORExpression -> {
+                LogicalORExpressionForStmt.ordinal,
+                LogicalANDExpressionForStmt.ordinal,
+                LogicalANDExpressionNoIn.ordinal,
+                LogicalORExpressionNoIn.ordinal,
+                LogicalANDExpression.ordinal,
+                LogicalORExpression.ordinal -> {
                     if(children.size >= 2) {
                         Node(
                             type = NodeType.LogicalExpression,
@@ -807,27 +809,27 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.AdditiveExpressionForStmt,
-                EcmaGrammar.MultiplicativeExpressionForStmt,
-                EcmaGrammar.ShiftExpressionForStmt,
-                EcmaGrammar.RelationalExpressionForStmt,
-                EcmaGrammar.EqualityExpressionForStmt,
-                EcmaGrammar.BitwiseANDExpressionForStmt,
-                EcmaGrammar.BitwiseXORExpressionForStmt,
-                EcmaGrammar.BitwiseORExpressionForStmt,
-                EcmaGrammar.AdditiveExpression,
-                EcmaGrammar.MultiplicativeExpression,
-                EcmaGrammar.ShiftExpression,
-                EcmaGrammar.RelationalExpressionNoIn,
-                EcmaGrammar.EqualityExpressionNoIn,
-                EcmaGrammar.BitwiseANDExpressionNoIn,
-                EcmaGrammar.BitwiseXORExpressionNoIn,
-                EcmaGrammar.BitwiseORExpressionNoIn,
-                EcmaGrammar.RelationalExpression,
-                EcmaGrammar.EqualityExpression,
-                EcmaGrammar.BitwiseANDExpression,
-                EcmaGrammar.BitwiseXORExpression,
-                EcmaGrammar.BitwiseORExpression-> {
+                AdditiveExpressionForStmt.ordinal,
+                MultiplicativeExpressionForStmt.ordinal,
+                ShiftExpressionForStmt.ordinal,
+                RelationalExpressionForStmt.ordinal,
+                EqualityExpressionForStmt.ordinal,
+                BitwiseANDExpressionForStmt.ordinal,
+                BitwiseXORExpressionForStmt.ordinal,
+                BitwiseORExpressionForStmt.ordinal,
+                AdditiveExpression.ordinal,
+                MultiplicativeExpression.ordinal,
+                ShiftExpression.ordinal,
+                RelationalExpressionNoIn.ordinal,
+                EqualityExpressionNoIn.ordinal,
+                BitwiseANDExpressionNoIn.ordinal,
+                BitwiseXORExpressionNoIn.ordinal,
+                BitwiseORExpressionNoIn.ordinal,
+                RelationalExpression.ordinal,
+                EqualityExpression.ordinal,
+                BitwiseANDExpression.ordinal,
+                BitwiseXORExpression.ordinal,
+                BitwiseORExpression.ordinal-> {
                     if(children.size >= 2) {
                         Node(
                             type = NodeType.BinaryExpression,
@@ -844,8 +846,8 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.UnaryExpressionForStmt,
-                EcmaGrammar.UnaryExpression -> {
+                UnaryExpressionForStmt.ordinal,
+                UnaryExpression.ordinal -> {
                     if(children.size >= 2) {
                         if(children[1].value == "++" || children[1].value == "--") {
                             Node(
@@ -875,8 +877,8 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.PostfixExpressionForStmt,
-                EcmaGrammar.PostfixExpression -> {
+                PostfixExpressionForStmt.ordinal,
+                PostfixExpression.ordinal -> {
                     if(children.size >= 2) {
                         Node(
                             type = NodeType.UpdateExpression,
@@ -893,8 +895,8 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.NewExpressionForStmt,
-                EcmaGrammar.NewExpression -> {
+                NewExpressionForStmt.ordinal,
+                NewExpression.ordinal -> {
                     if(children.size >= 2) {
                         Node(
                             type = NodeType.NewExpression,
@@ -910,8 +912,8 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.CallExpressionForStmt,
-                EcmaGrammar.CallExpression -> {
+                CallExpressionForStmt.ordinal,
+                CallExpression.ordinal -> {
                     if(children.size == 4) {
                         Node(
                             type = NodeType.MemberExpression,
@@ -971,8 +973,8 @@ class Parser {
                         }
                     }
                 }
-                EcmaGrammar.MemberExpressionForStmt,
-                EcmaGrammar.MemberExpression -> {
+                MemberExpressionForStmt.ordinal,
+                MemberExpression.ordinal -> {
                     if(children.size == 4) {
                         Node(
                             type = NodeType.MemberExpression,
@@ -1035,8 +1037,8 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.PrimaryExpressionForStmt,
-                EcmaGrammar.PrimaryExpression -> {
+                PrimaryExpressionForStmt.ordinal,
+                PrimaryExpression.ordinal -> {
                     if(children.size == 3) {
                         children[1].toNode()
                     }
@@ -1044,7 +1046,7 @@ class Parser {
                         children[0].toNode()
                     }
                 }
-                EcmaGrammar.ThisLiteral -> {
+                ThisLiteral.ordinal -> {
                     Node(
                         type = NodeType.ThisExpression,
                         loc = Location(
@@ -1053,7 +1055,7 @@ class Parser {
                         ),
                     )
                 }
-                EcmaGrammar.Identifier -> {
+                Identifier.ordinal -> {
                     Node(
                         type = NodeType.Identifier,
                         loc = Location(
@@ -1063,7 +1065,7 @@ class Parser {
                         name = this.value
                     )
                 }
-                EcmaGrammar.ArrayLiteral -> {
+                ArrayLiteral.ordinal -> {
                     val elements = mutableListOf<Node?>()
                     children.subList(1,children.size-1).forEach { node ->
                         node.calcElementList(elements)
@@ -1077,7 +1079,7 @@ class Parser {
                         elements = elements
                     )
                 }
-                EcmaGrammar.ObjectLiteral -> {
+                ObjectLiteral.ordinal -> {
                     if(children.size == 2) {
                         Node(
                             type = NodeType.ObjectExpression,
@@ -1129,7 +1131,7 @@ class Parser {
                         )
                     }
                 }
-                EcmaGrammar.PropertyAssignment -> {
+                PropertyAssignment.ordinal -> {
                     if(children.size == 3) {
                         Node(
                             type = NodeType.Property,
@@ -1223,7 +1225,7 @@ class Parser {
                         )
                     }
                 }
-                EcmaGrammar.NumericLiteral -> {
+                NumericLiteral.ordinal -> {
                     Node(
                         type = NodeType.Literal,
                         loc = Location(
@@ -1234,7 +1236,7 @@ class Parser {
                         raw = this.value
                     )
                 }
-                EcmaGrammar.NullLiteral -> {
+                NullLiteral.ordinal -> {
                     Node(
                         type = NodeType.Literal,
                         loc = Location(
@@ -1245,7 +1247,7 @@ class Parser {
                         raw = this.value
                     )
                 }
-                EcmaGrammar.BooleanLiteral -> {
+                BooleanLiteral.ordinal -> {
                     Node(
                         type = NodeType.Literal,
                         loc = Location(
@@ -1270,19 +1272,19 @@ class Parser {
         }
 
         private fun calcElementList(elements: MutableList<Node?>) {
-            if(this.kind == EcmaGrammar.Elision) {
+            if(this.kind == Elision.ordinal) {
                 elements.add(0,null)
                 if(children.size == 1) return
                 children[1].calcElementList(elements)
                 return
             }
-            if(this.kind == EcmaGrammar.ElementList) {
+            if(this.kind == ElementList.ordinal) {
                 for(child in this.children) {
                     child.calcElementList(elements)
                 }
                 return
             }
-            if(this.kind == EcmaGrammar.AssignmentExpression) {
+            if(this.kind == AssignmentExpression.ordinal) {
                 elements.add(0, this.toNode())
                 return
             }

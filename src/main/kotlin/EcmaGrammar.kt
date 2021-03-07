@@ -1,110 +1,118 @@
-package esTree
+import EcmaGrammar.Symbols.*
+import esTree.LR0ParserGenerator
 
 object EcmaGrammar {
-    const val MultiplicativeExpression = "MultiplicativeExpression"
-    const val MultiplicativeExpressionForStmt = "MultiplicativeExpressionForStmt"
-    const val AdditiveExpression = "AdditiveExpression"
-    const val AdditiveExpressionForStmt = "AdditiveExpressionForStmt"
-    const val ShiftExpression = "ShiftExpression"
-    const val ShiftExpressionForStmt = "ShiftExpressionForStmt"
-    const val RelationalExpression = "RelationalExpression"
-    const val RelationalExpressionForStmt = "RelationalExpressionForStmt"
-    const val RelationalExpressionNoIn = "RelationalExpressionNoIn"
-    const val EqualityExpression = "EqualityExpression"
-    const val EqualityExpressionForStmt = "EqualityExpressionForStmt"
-    const val EqualityExpressionNoIn = "EqualityExpressionNoIn"
-    const val BitwiseANDExpression = "BitwiseANDExpression"
-    const val BitwiseANDExpressionForStmt = "BitwiseANDExpressionForStmt"
-    const val BitwiseANDExpressionNoIn = "BitwiseANDExpressionNoIn"
-    const val BitwiseXORExpression = "BitwiseXORExpression"
-    const val BitwiseXORExpressionForStmt = "BitwiseXORExpressionForStmt"
-    const val BitwiseXORExpressionNoIn = "BitwiseXORExpressionNoIn"
-    const val BitwiseORExpression = "BitwiseORExpression"
-    const val BitwiseORExpressionForStmt = "BitwiseORExpressionForStmt"
-    const val BitwiseORExpressionNoIn = "BitwiseORExpressionNoIn"
-    const val LogicalANDExpression = "LogicalANDExpression"
-    const val LogicalANDExpressionForStmt = "LogicalANDExpressionForStmt"
-    const val LogicalANDExpressionNoIn = "LogicalANDExpressionNoIn"
-    const val LogicalORExpression = "LogicalORExpression"
-    const val LogicalORExpressionForStmt = "LogicalORExpressionForStmt"
-    const val LogicalORExpressionNoIn = "LogicalORExpressionNoIn"
-    const val ConditionalExpression = "ConditionalExpression"
-    const val ConditionalExpressionForStmt = "ConditionalExpressionForStmt"
-    const val ConditionalExpressionNoIn = "ConditionalExpressionNoIn"
-    const val AssignmentExpression = "AssignmentExpression"
-    const val AssignmentExpressionForStmt = "AssignmentExpressionForStmt"
-    const val AssignmentExpressionNoIn = "AssignmentExpressionNoIn"
-    const val LeftHandSideExpression = "LeftHandSideExpression"
-    const val LeftHandSideExpressionForStmt = "LeftHandSideExpressionForStmt"
-    const val NewExpression = "NewExpression"
-    const val NewExpressionForStmt = "NewExpressionForStmt"
-    const val MemberExpression = "MemberExpression"
-    const val MemberExpressionForStmt = "MemberExpressionForStmt"
-    const val PrimaryExpression = "PrimaryExpression"
-    const val PrimaryExpressionForStmt = "PrimaryExpressionForStmt"
-    const val UnaryExpression = "UnaryExpression"
-    const val UnaryExpressionForStmt = "UnaryExpressionForStmt"
-    const val PostfixExpression = "PostfixExpression"
-    const val PostfixExpressionForStmt = "PostfixExpressionForStmt"
-    const val ExpressionStatement = "ExpressionStatement"
-    const val CallExpression = "CallExpression"
-    const val CallExpressionForStmt = "CallExpressionForStmt"
-    const val Arguments = "Arguments"
-    const val ArgumentList = "ArgumentList"
-    const val Expression = "Expression"
-    const val ExpressionForStmt = "ExpressionForStmt"
-    const val ExpressionNoIn = "ExpressionNoIn"
-    const val Program = "Program"
-    const val SourceElements = "SourceElements"
-    const val SourceElement = "SourceElement"
-    const val Statement = "Statement"
-    const val AssignmentOperator = "AssignmentOperator"
-    const val Literal = "Literal"
-    const val NumericLiteral = "NumericLiteral"
-    const val BooleanLiteral = "BooleanLiteral"
-    const val NullLiteral = "NullLiteral"
-    const val ThisLiteral = "this"
-    const val Identifier = "Identifier"
-    const val ArrayLiteral = "ArrayLiteral"
-    const val ElementList = "ElementList"
-    const val Elision = "Elision"
-    const val Block = "Block"
-    const val StatementList = "StatementList"
-    const val VariableStatement = "VariableStatement"
-    const val VariableDeclarationList = "VariableDeclarationList"
-    const val VariableDeclarationListNoIn = "VariableDeclarationListNoIn"
-    const val VariableDeclaration = "VariableDeclaration"
-    const val VariableDeclarationNoIn = "VariableDeclarationNoIn"
-    const val Initializer = "Initializer"
-    const val InitializerNoIn = "InitializerNoIn"
-    const val EmptyStatement = "EmptyStatement"
-    const val IfStatement = "IfStatement"
-    const val IterationStatement = "IterationStatement"
-    const val ContinueStatement = "ContinueStatement"
-    const val BreakStatement = "BreakStatement"
-    const val ReturnStatement = "ReturnStatement"
-    const val WithStatement = "WithStatement"
-    const val SwitchStatement = "SwitchStatement"
-    const val CaseBlock = "CaseBlock"
-    const val CaseClauses = "CaseClauses"
-    const val CaseClause = "CaseClause"
-    const val DefaultClause = "DefaultClause"
-    const val LabelledStatement = "LabelledStatement"
-    const val ThrowStatement = "ThrowStatement"
-    const val TryStatement = "TryStatement"
-    const val Catch = "Catch"
-    const val Finally = "Finally"
-    const val DebuggerStatement = "DebuggerStatement"
-    const val FunctionDeclaration = "FunctionDeclaration"
-    const val FunctionExpression = "FunctionExpression"
-    const val FormalParameterList = "FormalParameterList"
-    const val FunctionBody = "FunctionBody"
-    const val ObjectLiteral = "ObjectLiteral"
-    const val PropertyNameAndValueList = "PropertyNameAndValueList"
-    const val PropertyAssignment = "PropertyAssignment"
-    const val PropertyName = "PropertyName"
-    const val PropertySetParameterList = "PropertySetParameterList"
-    const val LineTerminator = "LineTerminator"
+    enum class Symbols {
+        MultiplicativeExpression,
+        MultiplicativeExpressionForStmt,
+        AdditiveExpression,
+        AdditiveExpressionForStmt,
+        ShiftExpression,
+        ShiftExpressionForStmt,
+        RelationalExpression,
+        RelationalExpressionForStmt,
+        RelationalExpressionNoIn,
+        EqualityExpression,
+        EqualityExpressionForStmt,
+        EqualityExpressionNoIn,
+        BitwiseANDExpression,
+        BitwiseANDExpressionForStmt,
+        BitwiseANDExpressionNoIn,
+        BitwiseXORExpression,
+        BitwiseXORExpressionForStmt,
+        BitwiseXORExpressionNoIn,
+        BitwiseORExpression,
+        BitwiseORExpressionForStmt,
+        BitwiseORExpressionNoIn,
+        LogicalANDExpression,
+        LogicalANDExpressionForStmt,
+        LogicalANDExpressionNoIn,
+        LogicalORExpression,
+        LogicalORExpressionForStmt,
+        LogicalORExpressionNoIn,
+        ConditionalExpression,
+        ConditionalExpressionForStmt,
+        ConditionalExpressionNoIn,
+        AssignmentExpression,
+        AssignmentExpressionForStmt,
+        AssignmentExpressionNoIn,
+        LeftHandSideExpression,
+        LeftHandSideExpressionForStmt,
+        NewExpression,
+        NewExpressionForStmt,
+        MemberExpression,
+        MemberExpressionForStmt,
+        PrimaryExpression,
+        PrimaryExpressionForStmt,
+        UnaryExpression,
+        UnaryExpressionForStmt,
+        PostfixExpression,
+        PostfixExpressionForStmt,
+        ExpressionStatement,
+        CallExpression,
+        CallExpressionForStmt,
+        Arguments,
+        ArgumentList,
+        Expression,
+        ExpressionForStmt,
+        ExpressionNoIn,
+        Program,
+        SourceElements,
+        SourceElement,
+        Statement,
+        AssignmentOperator,
+        Literal,
+        NumericLiteral,
+        BooleanLiteral,
+        NullLiteral,
+        ThisLiteral,
+        Identifier,
+        ArrayLiteral,
+        ElementList,
+        Elision,
+        Block,
+        StatementList,
+        VariableStatement,
+        VariableDeclarationList,
+        VariableDeclarationListNoIn,
+        VariableDeclaration,
+        VariableDeclarationNoIn,
+        Initializer,
+        InitializerNoIn,
+        EmptyStatement,
+        IfStatement,
+        IterationStatement,
+        ContinueStatement,
+        BreakStatement,
+        ReturnStatement,
+        WithStatement,
+        SwitchStatement,
+        CaseBlock,
+        CaseClauses,
+        CaseClause,
+        DefaultClause,
+        LabelledStatement,
+        ThrowStatement,
+        TryStatement,
+        Catch,
+        Finally,
+        DebuggerStatement,
+        FunctionDeclaration,
+        FunctionExpression,
+        FormalParameterList,
+        FunctionBody,
+        ObjectLiteral,
+        PropertyNameAndValueList,
+        PropertyAssignment,
+        PropertyName,
+        PropertySetParameterList,
+        EMPTY,
+        LineTerminator;
+
+        companion object {
+            fun fromInt(v: Int): Symbols = values().find { it.ordinal == v }!!
+        }
+    }
     private const val OR = "|/"
 
     val es5Grammar = listOf(
@@ -387,41 +395,60 @@ object EcmaGrammar {
             " $OR function $Identifier ( $FormalParameterList ) { $FunctionBody }",
         "$FormalParameterList ::= $Identifier" +
             " $OR $FormalParameterList , $Identifier",
-        "$FunctionBody ::= ε" +
+        "$FunctionBody ::= $EMPTY" +
             " $OR $SourceElements",
         "$Program ::= $SourceElements"
     )
-    const val es5StartSymbol = Program
+    val es5StartSymbol = Program
 
-    fun grammarParser(grammar: List<String>): List<LR1ParserGenerator.ProductionRuleData> {
-        val result = mutableListOf<LR1ParserGenerator.ProductionRuleData>()
+    val anonymousOperators = listOf(
+        "==","!=","===","!==","<","<=",">",">=",
+        "<<",">>",">>>","+","-","*","/","%","|",
+        "^","&","&&","||",
+        "?", ":","!","~","++","--","(",")",
+        "[","]",".",",",";","{","}","="
+    )
+    val assignmentOperators = listOf(
+        "+=","-=","*=","/=","%=","<<=",">>=", // '=' は外でも使うのではずし
+        ">>>=","|=","^=","&="
+    )
+    val keywords = listOf(
+        "this","in","instanceof","typeof","void","delete","new","var",
+        "if","else","while","for","continue","break","return",
+        "with","switch","case","default","throw",
+        "try","catch","finally","debugger","function","get","set","do"
+    )
+    val operatorsMap = hashMapOf<String,Int>()
+
+    fun grammarParserForLR0(grammar: List<String>): List<LR0ParserGenerator.ProductionRuleData> {
+        var i = Symbols.values().size + 10
+        anonymousOperators.forEach { operatorsMap[it] = i++ }
+        assignmentOperators.forEach { operatorsMap[it] = i++ }
+        keywords.forEach { operatorsMap[it] = i++ }
+        operatorsMap["$"] = i++
+        operatorsMap["EOF"] = i++
+        val result = mutableListOf<LR0ParserGenerator.ProductionRuleData>()
         for(g in grammar) {
             val s = g.split(" ::= ")
-            val left = s.first()
+            val left = Symbols.valueOf(s.first()).ordinal
             val right = s[1].split(" $OR ")
             for(r in right) {
-                result.add(
-                    LR1ParserGenerator.ProductionRuleData(
-                    left, r.split(" ").filter { it.isNotBlank() }
-                ))
+                r.split(" ").filter { it.isNotBlank() }.map { raw ->
+                    return@map operatorsMap[raw] ?: Symbols.valueOf(raw).ordinal
+                }.let {
+                    result.add(
+                        LR0ParserGenerator.ProductionRuleData(
+                            left, it
+                        )
+                    )
+                }
             }
         }
         return result
     }
 
-    fun grammarParserForLR0(grammar: List<String>): List<LR0ParserGenerator.ProductionRuleData> {
-        val result = mutableListOf<LR0ParserGenerator.ProductionRuleData>()
-        for(g in grammar) {
-            val s = g.split(" ::= ")
-            val left = s.first()
-            val right = s[1].split(" $OR ")
-            for(r in right) {
-                result.add(
-                    LR0ParserGenerator.ProductionRuleData(
-                        left, r.split(" ").filter { it.isNotBlank() }
-                    ))
-            }
-        }
-        return result
+    fun decode(value: Int): String {
+        return operatorsMap.entries.find { it.value == value }?.key
+            ?: Symbols.fromInt(value).name
     }
 }

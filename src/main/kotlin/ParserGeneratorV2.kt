@@ -1,18 +1,20 @@
 package esTree
 
+import EcmaGrammar
 import java.io.File
 import java.lang.Exception
 import kotlin.system.measureTimeMillis
+import EcmaGrammar.Symbols.*
 
 class DragonParserGenerator(
     private val rules: List<LR0ParserGenerator.ProductionRuleData>,
-    private val startSymbol: String) {
-    val lr0ParserGenerator = LR0ParserGenerator(rules, startSymbol)
-    val firstMap = mutableMapOf<String, MutableSet<String>>()
+    private val startSymbol: Int) {
+    private val lr0ParserGenerator = LR0ParserGenerator(rules, startSymbol)
+    private val firstMap = mutableMapOf<Int, MutableSet<Int>>()
     //val gotoMap = mutableMapOf<Pair<String, String>, String>() //state to token, nextState
-    val closureMap = mutableMapOf<Set<LALR1ProductionRuleData>, String>() //rules, state
+    private val closureMap = mutableMapOf<Set<LALR1ProductionRuleData>, String>() //rules, state
 
-    val transitionMap = mutableMapOf<Pair<String, String>, TransitionData>()
+    val transitionMap = mutableMapOf<Pair<String, Int>, TransitionData>()
     enum class TransitionKind { SHIFT, REDUCE, ACCEPT }
     data class TransitionData(
         val kind: TransitionKind,
@@ -26,10 +28,6 @@ class DragonParserGenerator(
                 TransitionKind.ACCEPT -> "acc"
             }
         }
-    }
-
-    companion object {
-        private const val EMPTY = "ε"
     }
 
     init {
@@ -49,27 +47,28 @@ class DragonParserGenerator(
         println("Transition size = ${transitionMap.size}")
     }
 
-    private fun getFirst(value: List<String>, suffixes: Set<String>): Set<String> {
+    private fun getFirst(value: List<Int>, suffixes: Set<Int>): Set<Int> {
         if(value.isEmpty()) return suffixes
-        if(value.first() == EMPTY) {//{ε}
+        if(value.first() == EMPTY.ordinal) {//{ε}
             return suffixes
         }
         if(lr0ParserGenerator.terminalTokens.contains(value.first())
-            || value.first() == "$") {
+            || value.first() == EcmaGrammar.operatorsMap["$"]) {
             return setOf(value.first())//{α}
         }
+
         firstMap[value.first()]?.let {
-            if(!it.contains(EMPTY)) return it //First(Y)
+            if(!it.contains(EMPTY.ordinal)) return it //First(Y)
             if(value.size == 1) {
-                if(suffixes.isNotEmpty()) return it.minus(EMPTY).union(suffixes)
+                if(suffixes.isNotEmpty()) return it.minus(EMPTY.ordinal).union(suffixes)
                 return it
             }
-            return it.minus(EMPTY).union(getFirst(value.slice(1 until value.size),suffixes)) //(First(Y)-{ε})∪First(α)
+            return it.minus(EMPTY.ordinal).union(getFirst(value.slice(1 until value.size),suffixes)) //(First(Y)-{ε})∪First(α)
         }
         return emptySet()
     }
 
-    private fun addFirst(key: String, set: Set<String>) {
+    private fun addFirst(key: Int, set: Set<Int>) {
         firstMap[key]?.addAll(set) ?: kotlin.run {
             firstMap[key] = set.toMutableSet()
         }
@@ -92,14 +91,14 @@ class DragonParserGenerator(
     }
 
     private fun calcGotoMap() {
-        val initialGrammar = LR0ParserGenerator.ProductionRuleData("$startSymbol'", listOf(startSymbol))
+        val initialGrammar = LR0ParserGenerator.ProductionRuleData(-1, listOf(startSymbol))
         val extendedRules = rules.toMutableList().apply {
             add(initialGrammar)
         }
         val kernelMap = lr0ParserGenerator.getKernelMap()
         val kernels = mutableSetOf<Pair<String,LR0ParserGenerator.LRProductionRuleData>>()
         kernelMap.forEach { it.value.forEach { v -> kernels.add(it.key to v) } }
-        val followsMap = kernels.map { it to mutableSetOf<String>() }.toMap()
+        val followsMap = kernels.map { it to mutableSetOf<Int>() }.toMap()
         val propagateMap = mutableMapOf<
             Pair<String,LR0ParserGenerator.LRProductionRuleData>,
             Set<Pair<String,LR0ParserGenerator.LRProductionRuleData>>
@@ -107,7 +106,7 @@ class DragonParserGenerator(
         val updatedKernels = mutableSetOf<Pair<String,LR0ParserGenerator.LRProductionRuleData>>()
         //propagateMapの生成とfollowsMapの初期化
         for(kernel in kernels) {
-            val j = getClosure(setOf(kernel.second.toLALR1(setOf("#"))),extendedRules)
+            val j = getClosure(setOf(kernel.second.toLALR1(setOf(-100))),extendedRules)
             //println("closure=$j")
             val propSet = mutableSetOf<Pair<String,LR0ParserGenerator.LRProductionRuleData>>()
             for(data in j.filter { !it.reducible }) {
@@ -115,7 +114,7 @@ class DragonParserGenerator(
                 val shifted = data.shift().toLR()
                 val nextState = lr0ParserGenerator.gotoMap[kernel.first to shiftTargetToken]
                 data.follow.forEach { f ->
-                    if(f == "#") {
+                    if(f == -100) {
                         propSet.add(nextState!! to shifted)
                     }
                     else {
@@ -126,7 +125,7 @@ class DragonParserGenerator(
             }
             propagateMap[kernel] = propSet
         }
-        followsMap["I0" to initialGrammar.toLR()]?.add("$")
+        followsMap["I0" to initialGrammar.toLR()]?.add(EcmaGrammar.operatorsMap["$"]!!)
         updatedKernels.add("I0" to initialGrammar.toLR())
 
         //println("props=$propagateMap")
@@ -170,10 +169,10 @@ class DragonParserGenerator(
             entry.key.filter { r -> r.reducible }.forEach {
                 for(token in it.follow) {
                     if(transitionMap.containsKey(entry.value to token)) {
-                        if(token == "else") continue //elseの競合はshift優先
+                        if(token == EcmaGrammar.operatorsMap["else"]!!) continue //elseの競合はshift優先
                         //FunExprとFunDecの還元競合はFunDec優先
-                        if(it.left == EcmaGrammar.FunctionExpression) continue
-                        if(it.left == EcmaGrammar.FunctionDeclaration) {
+                        if(it.left == FunctionExpression.ordinal) continue
+                        if(it.left == FunctionDeclaration.ordinal) {
                             transitionMap[entry.value to token] = TransitionData(
                                 TransitionKind.REDUCE, null, it.toRule()
                             )
@@ -194,11 +193,14 @@ class DragonParserGenerator(
                     )
                 }
             }
-            if(entry.key.any { r -> r.right == listOf(startSymbol) && r.follow.contains("$") && r.index == r.right.size }) {
+            if(entry.key.any { r ->
+                    r.right == listOf(startSymbol)
+                        && r.follow.contains(EcmaGrammar.operatorsMap["$"])
+                        && r.index == r.right.size }) {
 //                if(transitionMap.containsKey(entry.value to "$")) {
 //                    throw Exception("SLR競合3 $entry")
 //                }
-                transitionMap[entry.value to "$"] = TransitionData(
+                transitionMap[entry.value to EcmaGrammar.operatorsMap["$"]!!] = TransitionData(
                     TransitionKind.ACCEPT, null, null
                 )
             }
@@ -221,12 +223,12 @@ class DragonParserGenerator(
                     file.appendText("${u.padEnd(4)}: $t\n")
                 }
             }
-        } catch(e: java.lang.Exception) {
+        } catch(e: Exception) {
             println("closureMap書き込み失敗${e.message}")
         }
     }
 
-    fun csvEncode(text: String?): String {
+    private fun csvEncode(text: String?): String {
         if(text == null) return ""
         return "\"${text.replace("\"","\"\"")}\""
     }
@@ -237,24 +239,24 @@ class DragonParserGenerator(
             if(file.createNewFile()) {
                 //file.appendText("Transition Table\n")
                 file.appendText(",")
-                lr0ParserGenerator.terminalTokens.forEach { file.appendText("${csvEncode(it)},") }
+                lr0ParserGenerator.terminalTokens.forEach { file.appendText("${csvEncode(EcmaGrammar.decode(it))},") }
                 file.appendText("$,")
-                lr0ParserGenerator.nonTerminalTokens.forEach { file.appendText("${csvEncode(it)},") }
+                lr0ParserGenerator.nonTerminalTokens.forEach { file.appendText("${csvEncode(EcmaGrammar.decode(it))},") }
                 file.appendText("\n")
                 for(c in closureMap.values) {
                     file.appendText("$c,")
                     lr0ParserGenerator.terminalTokens.forEach { file.appendText("${csvEncode(transitionMap[c to it]?.toString())},") }
-                    file.appendText("${csvEncode(transitionMap[c to "$"]?.toString())},")
+                    file.appendText("${csvEncode(transitionMap[c to EcmaGrammar.operatorsMap["$"]]?.toString())},")
                     lr0ParserGenerator.nonTerminalTokens.forEach { file.appendText("${csvEncode(transitionMap[c to it]?.toString())},") }
                     file.appendText("\n")
                 }
             }
-        } catch(e: java.lang.Exception) {
+        } catch(e: Exception) {
             println("TransitionMap書き込み失敗${e.message}")
         }
     }
 
-    data class ErrorTransitionData(val state: String, val token: String, val data: TransitionData)
+    data class ErrorTransitionData(val state: String, val token: Int, val data: TransitionData)
 
 
     private fun getClosure(
@@ -262,7 +264,7 @@ class DragonParserGenerator(
         grammarRules: List<LR0ParserGenerator.ProductionRuleData> = rules
     ): Set<LALR1ProductionRuleData> {
         //println("getClosure: $input")
-        val result = mutableMapOf<LALR1ProductionRuleData, MutableSet<String>>()
+        val result = mutableMapOf<LALR1ProductionRuleData, MutableSet<Int>>()
         input.forEach { result[it.copy(follow = emptySet())] = it.follow.toMutableSet() }
         var updated = true
         while(updated) {
@@ -291,11 +293,11 @@ class DragonParserGenerator(
     }
 
     data class LALR1ProductionRuleData(
-        val left: String,
-        val right: List<String>,
+        val left: Int,
+        val right: List<Int>,
         val index: Int,
         val reducible: Boolean,
-        val follow: Set<String>
+        val follow: Set<Int>
     ) {
         fun shift(): LALR1ProductionRuleData {
             if(reducible) throw Exception("シフトできません $this")
@@ -307,7 +309,11 @@ class DragonParserGenerator(
         }
 
         override fun toString(): String {
-            return "$left->${right.toMutableList().apply { add(index,"・") }.joinToString("")} - $follow"
+            return "$left->${
+                right.toMutableList()
+                    .apply { add(index, -1000) }
+                    .joinToString("") { if(it == -1000) "・" else EcmaGrammar.decode(it) }
+            } - $follow"
         }
 
         fun toRule() = LR0ParserGenerator.ProductionRuleData(
@@ -323,16 +329,12 @@ class DragonParserGenerator(
 
 class LR0ParserGenerator(
     private val rules: List<ProductionRuleData>,
-    private val startSymbol: String) {
+    private val startSymbol: Int) {
 
-    companion object {
-        private const val EMPTY = "ε"
-    }
-
-    val terminalTokens = mutableListOf<String>()
-    val nonTerminalTokens = mutableListOf<String>()
-    val gotoMap = mutableMapOf<Pair<String, String>, String>()
-    val closureMap = mutableMapOf<Set<LRProductionRuleData>, String>()
+    val terminalTokens = mutableListOf<Int>()
+    val nonTerminalTokens = mutableListOf<Int>()
+    val gotoMap = mutableMapOf<Pair<String, Int>, String>()
+    private val closureMap = mutableMapOf<Set<LRProductionRuleData>, String>()
 
     init {
         measureTimeMillis {
@@ -355,13 +357,13 @@ class LR0ParserGenerator(
                 }
             }
         }
-        terminalTokens.remove(EMPTY)
+        terminalTokens.remove(EMPTY.ordinal)
         println("T=$terminalTokens")
         println("N=$nonTerminalTokens")
     }
 
     private fun calcGoto() {
-        val initialGrammar = ProductionRuleData("$startSymbol'", listOf(startSymbol))
+        val initialGrammar = ProductionRuleData(-1, listOf(startSymbol))
         val extendedRules = rules.toMutableList().apply {
             add(initialGrammar)
         }
@@ -400,7 +402,7 @@ class LR0ParserGenerator(
     ): Set<LRProductionRuleData> {
         //println("getClosure: $input")
         val result = input.toMutableSet()
-        val addedTokens = mutableSetOf<String>()
+        val addedTokens = mutableSetOf<Int>()
         var updated = true
         while(updated) {
             updated = false
@@ -421,7 +423,7 @@ class LR0ParserGenerator(
 
     private fun getGoto(
         input: Set<LRProductionRuleData>,
-        token: String,
+        token: Int,
         grammarRules: List<ProductionRuleData> = rules
     ): Set<LRProductionRuleData> {
         //println("GetGoto: $input, $token")
@@ -437,51 +439,14 @@ class LR0ParserGenerator(
     fun getKernelMap(): Map<String, Set<LRProductionRuleData>> {
         val result = mutableMapOf<String, Set<LRProductionRuleData>>()
         for(entry in closureMap) {
-            result[entry.value] = entry.key.filter { d -> d.index != 0 || d.left == "$startSymbol'" }.toSet()
+            result[entry.value] = entry.key.filter { d -> d.index != 0 || d.left == -1 }.toSet()
         }
         return result
     }
 
-    fun printClosureMap() {
-        println("Closures")
-        closureMap.forEach { (t, u) ->
-            println("${u.padEnd(3)}: $t")
-        }
-    }
-
-    fun printGotoMap() {
-        println("Goto Table")
-        print("   ")
-        terminalTokens.forEach { print(" ${it.padStart(3)} ") }
-        print("  $  ")
-        nonTerminalTokens.forEach { print(" ${it.padStart(3)} ") }
-        print("\n")
-        for(c in closureMap.values) {
-            print(c.padEnd(3))
-            terminalTokens.forEach { print(" ${gotoMap[c to it]?.padStart(3) ?: "   "} ") }
-            print(" ${gotoMap[c to "$"]?.padStart(3) ?: "   "} ")
-            nonTerminalTokens.forEach { print(" ${gotoMap[c to it]?.padStart(3) ?: "   "} ") }
-            print("\n")
-        }
-    }
-
-    fun isLR0Grammar(): Boolean {
-        for(entry in closureMap) {
-            if(entry.key.isEmpty()) continue
-            if(entry.key.all { !it.reducible }) continue
-
-            //shift/reduce競合
-            if(entry.key.any { it.reducible } && entry.key.any{ !it.reducible }) return false
-
-            //reduce/reduce競合
-            if(entry.key.count { it.reducible } >= 2) return false
-        }
-        return true
-    }
-
     data class LRProductionRuleData(
-        val left: String,
-        val right: List<String>,
+        val left: Int,
+        val right: List<Int>,
         val index: Int,
         val reducible: Boolean
     ) {
@@ -493,28 +458,32 @@ class LR0ParserGenerator(
             )
         }
 
-        fun toLALR1(follow: Set<String>) = DragonParserGenerator.LALR1ProductionRuleData(
+        fun toLALR1(follow: Set<Int>) = DragonParserGenerator.LALR1ProductionRuleData(
             left = left, right = right,
             index = index, reducible = reducible, follow
         )
 
         override fun toString(): String {
-            return "$left->${right.toMutableList().apply { add(index,"・") }.joinToString("")}"
+            return "$left->${
+                right.toMutableList()
+                    .apply { add(index, -1000) }
+                    .joinToString("") { if(it == -1000) "・" else EcmaGrammar.decode(it) }
+            }"
         }
     }
 
     data class ProductionRuleData(
-        val left: String,
-        val right: List<String> //tokenized
+        val left: Int,
+        val right: List<Int> //tokenized
     ) {
         fun toLR() = LRProductionRuleData(
             left = left, right = right,
-            index = 0, reducible = right.size == 1 && right[0] == EMPTY
+            index = 0, reducible = right.size == 1 && right[0] == EMPTY.ordinal
         )
 
-        fun toLALR1(follow: Set<String>) = DragonParserGenerator.LALR1ProductionRuleData(
+        fun toLALR1(follow: Set<Int>) = DragonParserGenerator.LALR1ProductionRuleData(
             left = left, right = right,
-            index = 0, reducible = right.size == 1 && right[0] == EMPTY, follow
+            index = 0, reducible = right.size == 1 && right[0] == EMPTY.ordinal, follow
         )
     }
 }
