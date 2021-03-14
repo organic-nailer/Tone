@@ -60,7 +60,8 @@ class Parser {
                     inputMut.add(parseIndex, Tokenizer.TokenData(
                         ";", EcmaGrammar.operatorsMap[";"]!!,
                         prev?.startLine ?: 1,
-                        (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
+                        (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1,
+                        prev?.startLine ?: 1, (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0),
                     ))
                     previousIsLineTerminator = null
                     asiState = ASIState.WAIT_SHIFT
@@ -79,7 +80,7 @@ class Parser {
                         inputMut[parseIndex].raw,
                         mutableListOf(),
                         Position(inputMut[parseIndex].startLine, inputMut[parseIndex].startIndex),
-                        Position(inputMut[parseIndex].startLine, inputMut[parseIndex].startIndex + inputMut[parseIndex].raw.length)
+                        Position(inputMut[parseIndex].endLine, inputMut[parseIndex].endIndex)
                     ))
                     previousIsLineTerminator = null
                     parseIndex++
@@ -127,7 +128,9 @@ class Parser {
                         inputMut.add(parseIndex, Tokenizer.TokenData(
                             ";", EcmaGrammar.operatorsMap[";"]!!,
                             prev?.startLine ?: 1,
-                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
+                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1,
+                            prev?.startLine ?: 1,
+                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0)
                         ))
                         previousIsLineTerminator = null
                         asiState = ASIState.WAIT_SHIFT
@@ -141,7 +144,9 @@ class Parser {
                         inputMut.add(parseIndex, Tokenizer.TokenData(
                             ";", EcmaGrammar.operatorsMap[";"]!!,
                             prev?.startLine ?: 1,
-                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1
+                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1,
+                            prev?.startLine ?: 1,
+                            (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0)
                         ))
                         previousIsLineTerminator = null
                         asiState = ASIState.WAIT_SHIFT
@@ -1225,7 +1230,7 @@ class Parser {
                         )
                     }
                 }
-                NumericLiteral.ordinal -> {
+                StringLiteral.ordinal -> {
                     Node(
                         type = NodeType.Literal,
                         loc = Location(
@@ -1233,6 +1238,17 @@ class Parser {
                             end = this.end ?: Position(-1,-1)
                         ),
                         value = this.value?.toIntOrNull()?.toString(),
+                        raw = this.value
+                    )
+                }
+                NumericLiteral.ordinal -> {
+                    Node(
+                        type = NodeType.Literal,
+                        loc = Location(
+                            start = this.start ?: Position(-1,-1),
+                            end = this.end ?: Position(-1,-1)
+                        ),
+                        value = this.value,
                         raw = this.value
                     )
                 }

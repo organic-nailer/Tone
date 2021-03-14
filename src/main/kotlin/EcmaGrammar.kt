@@ -106,6 +106,7 @@ object EcmaGrammar {
         PropertyAssignment,
         PropertyName,
         PropertySetParameterList,
+        StringLiteral,
         EMPTY,
         LineTerminator;
 
@@ -125,6 +126,7 @@ object EcmaGrammar {
             " $OR get $PropertyName ( ) { $FunctionBody }" +
             " $OR set $PropertyName ( $PropertySetParameterList ) { $FunctionBody }",
         "$PropertyName ::= $Identifier" +
+            " $OR $StringLiteral" +
             " $OR $NumericLiteral",
         "$PropertySetParameterList ::= $Identifier",
         "$ArrayLiteral ::= [ ]" +
@@ -140,7 +142,8 @@ object EcmaGrammar {
             " $OR $Elision ,",
         "$Literal ::= $NullLiteral" +
             " $OR $BooleanLiteral" +
-            " $OR $NumericLiteral",
+            " $OR $NumericLiteral" +
+            " $OR $StringLiteral",
         "$PrimaryExpression ::= $ThisLiteral" +
             " $OR $Identifier" +
             " $OR $Literal" +
