@@ -1,6 +1,5 @@
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.flipkart.zjsonpatch.JsonDiff
-import esTree.*
 import kotlinx.serialization.json.Json
 import java.io.File
 import kotlin.test.assertEquals

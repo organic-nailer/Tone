@@ -1,6 +1,3 @@
-package esTree
-
-import EcmaGrammar
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,13 +10,14 @@ class Parser {
         EcmaGrammar.es5StartSymbol.ordinal
     )
 
+    var parsedNode: Node? = null
+
     fun parse(input: List<Tokenizer.TokenData>): String? {
-        var node: Node?
         measureTimeMillis {
             val preTree = parseInternal(input) ?: return null
-            node = preTree.toNode()
+            parsedNode = preTree.toNode()
         }.run { println("Parsed in $this ms") }
-        val json = Json.encodeToString(node)
+        val json = Json.encodeToString(parsedNode)
         println(json)
         return json
     }
@@ -62,7 +60,8 @@ class Parser {
                         prev?.startLine ?: 1,
                         (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1,
                         prev?.startLine ?: 1, (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0),
-                    ))
+                    )
+                    )
                     previousIsLineTerminator = null
                     asiState = ASIState.WAIT_SHIFT
                     println("ASI: $parseIndex => $inputMut")
@@ -75,13 +74,15 @@ class Parser {
                         throw Exception("パースエラー($asiState): $stack, $parseIndex")
                     }
                     stack.addFirst(transition.value!! to inputMut[parseIndex].kind)
-                    nodeStack.addFirst(NodeInternal(
+                    nodeStack.addFirst(
+                        NodeInternal(
                         stack.first().second,
                         inputMut[parseIndex].raw,
                         mutableListOf(),
                         Position(inputMut[parseIndex].startLine, inputMut[parseIndex].startIndex),
                         Position(inputMut[parseIndex].endLine, inputMut[parseIndex].endIndex)
-                    ))
+                    )
+                    )
                     previousIsLineTerminator = null
                     parseIndex++
                     if(asiState == ASIState.WAIT_SHIFT) {
@@ -131,7 +132,8 @@ class Parser {
                             (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1,
                             prev?.startLine ?: 1,
                             (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0)
-                        ))
+                        )
+                        )
                         previousIsLineTerminator = null
                         asiState = ASIState.WAIT_SHIFT
                         println("ASI: $parseIndex => $inputMut")
@@ -147,7 +149,8 @@ class Parser {
                             (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0) - 1,
                             prev?.startLine ?: 1,
                             (prev?.startIndex ?: 0) + (prev?.raw?.length ?: 0)
-                        ))
+                        )
+                        )
                         previousIsLineTerminator = null
                         asiState = ASIState.WAIT_SHIFT
                         println("ASI: $parseIndex => $inputMut")

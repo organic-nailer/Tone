@@ -1,5 +1,4 @@
 import EcmaGrammar.Symbols.*
-import esTree.LR0ParserGenerator
 
 object EcmaGrammar {
     enum class Symbols {

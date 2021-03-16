@@ -1,6 +1,3 @@
-package esTree
-
-import EcmaGrammar
 import java.io.File
 import java.lang.Exception
 import kotlin.system.measureTimeMillis
@@ -96,19 +93,19 @@ class DragonParserGenerator(
             add(initialGrammar)
         }
         val kernelMap = lr0ParserGenerator.getKernelMap()
-        val kernels = mutableSetOf<Pair<String,LR0ParserGenerator.LRProductionRuleData>>()
+        val kernels = mutableSetOf<Pair<String, LR0ParserGenerator.LRProductionRuleData>>()
         kernelMap.forEach { it.value.forEach { v -> kernels.add(it.key to v) } }
         val followsMap = kernels.map { it to mutableSetOf<Int>() }.toMap()
         val propagateMap = mutableMapOf<
-            Pair<String,LR0ParserGenerator.LRProductionRuleData>,
-            Set<Pair<String,LR0ParserGenerator.LRProductionRuleData>>
+            Pair<String, LR0ParserGenerator.LRProductionRuleData>,
+            Set<Pair<String, LR0ParserGenerator.LRProductionRuleData>>
             >()
-        val updatedKernels = mutableSetOf<Pair<String,LR0ParserGenerator.LRProductionRuleData>>()
+        val updatedKernels = mutableSetOf<Pair<String, LR0ParserGenerator.LRProductionRuleData>>()
         //propagateMapの生成とfollowsMapの初期化
         for(kernel in kernels) {
             val j = getClosure(setOf(kernel.second.toLALR1(setOf(-100))),extendedRules)
             //println("closure=$j")
-            val propSet = mutableSetOf<Pair<String,LR0ParserGenerator.LRProductionRuleData>>()
+            val propSet = mutableSetOf<Pair<String, LR0ParserGenerator.LRProductionRuleData>>()
             for(data in j.filter { !it.reducible }) {
                 val shiftTargetToken = data.right[data.index]
                 val shifted = data.shift().toLR()
@@ -178,14 +175,16 @@ class DragonParserGenerator(
                             )
                             continue
                         }
-                        errorTransitions.add(ErrorTransitionData(
+                        errorTransitions.add(
+                            ErrorTransitionData(
                             entry.value, token,
                             TransitionData(
                                 TransitionKind.REDUCE,
                                 null,
                                 it.toRule()
                             )
-                        ))
+                        )
+                        )
                         continue
                     }
                     transitionMap[entry.value to token] = TransitionData(

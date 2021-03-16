@@ -1,19 +1,19 @@
-import esTree.CharReader
-import esTree.Tokenizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TokenizerTest {
     @Test
     fun charReaderTest() {
-        val reader = CharReader(null,
+        val reader = CharReader(
+            null,
             "1234==\n" +
                 "hello_2\n" +
                 "x=\"wor\\\n" +
                 "ld\"\n" +
                 "//google\n" +
                 "a/*hello\n" +
-                "ok,*/")
+                "ok,*/"
+        )
         assertEquals('1',reader.getNextChar())
         assertEquals(0, reader.index)
         assertEquals("1234",reader.readNumber())
