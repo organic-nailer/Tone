@@ -16,27 +16,24 @@ class ByteCompiler {
                 return
             }
             NodeType.BinaryExpression -> {
-                when(node.operator) {
-                    "+" -> {
-                        node.left?.let { compile(it) }
-                        node.right?.let { compile(it) }
-                        byteLines.add(ByteOperation(OpCode.Add, null))
-                        return
-                    }
-                    "*" -> {
-                        node.left?.let { compile(it) }
-                        node.right?.let { compile(it) }
-                        byteLines.add(ByteOperation(OpCode.Mul, null))
-                        return
-                    }
+                node.left?.let { compile(it) }
+                node.right?.let { compile(it) }
+                val code = when(node.operator) {
+                    "+" -> OpCode.Add
+                    "-" -> OpCode.Sub
+                    "*" -> OpCode.Mul
+                    "/" -> OpCode.Div
+                    "%" -> OpCode.Rem
                     else -> {
                         throw NotImplementedError()
                     }
                 }
+                byteLines.add(ByteOperation(code, null))
+                return
             }
             NodeType.Literal -> {
                 node.value?.toIntOrNull()?.let {
-                    byteLines.add(ByteOperation(OpCode.Push, it))
+                    byteLines.add(ByteOperation(OpCode.Push, it.toString()))
                     return
                 }
                 throw NotImplementedError()
@@ -49,9 +46,10 @@ class ByteCompiler {
 
     data class ByteOperation(
         val opCode: OpCode,
-        val operand: Int?
+        val operand: String?
     )
     enum class OpCode {
-        Push, Pop, Add, Sub, Mul, Div
+        Push, Pop, Add, Sub, Mul, Div, Rem,
+        ShiftL, ShiftR, ShiftUR, And, Or, Xor
     }
 }
