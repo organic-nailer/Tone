@@ -55,6 +55,21 @@ class ToneVirtualMachine {
                     }
                     mainStack.addFirst(NumberData(NumberData.NumberKind.Real, result))
                 }
+                ByteCompiler.OpCode.And,
+                ByteCompiler.OpCode.Or,
+                ByteCompiler.OpCode.Xor -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val rNum = toInt32(getValue(rRef))
+                    val lNum = toInt32(getValue(lRef))
+                    val result = when(operation.opCode) {
+                        ByteCompiler.OpCode.And -> lNum and rNum
+                        ByteCompiler.OpCode.Or -> lNum or rNum
+                        ByteCompiler.OpCode.Xor -> lNum xor rNum
+                        else -> throw Exception()
+                    }
+                    mainStack.addFirst(NumberData(NumberData.NumberKind.Real, result))
+                }
             }
         }
         if(mainStack.size != 1) {

@@ -24,6 +24,12 @@ class ByteCompiler {
                     "*" -> OpCode.Mul
                     "/" -> OpCode.Div
                     "%" -> OpCode.Rem
+                    "&" -> OpCode.And
+                    "|" -> OpCode.Or
+                    "^" -> OpCode.Xor
+                    "<<" -> OpCode.ShiftL
+                    ">>" -> OpCode.ShiftR
+                    ">>>" -> OpCode.ShiftUR
                     else -> {
                         throw NotImplementedError()
                     }
