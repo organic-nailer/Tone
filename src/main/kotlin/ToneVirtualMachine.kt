@@ -2,7 +2,7 @@ import kotlin.math.abs
 import kotlin.math.sign
 
 class ToneVirtualMachine {
-    fun run(code: List<ByteCompiler.ByteOperation>): Int? {
+    fun run(code: List<ByteCompiler.ByteOperation>): StackData? {
         val mainStack = ArrayDeque<StackData>()
         for(operation in code) {
             when(operation.opCode) {
@@ -70,13 +70,65 @@ class ToneVirtualMachine {
                     }
                     mainStack.addFirst(NumberData(NumberData.NumberKind.Real, result))
                 }
+                ByteCompiler.OpCode.LT -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = abstractRelationalComparison(
+                        getValue(lRef), getValue(rRef)
+                    )
+                    mainStack.addFirst(
+                        if(r is UndefinedData) BooleanData(false) else r
+                    )
+                }
+                ByteCompiler.OpCode.GT -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = abstractRelationalComparison(
+                        getValue(rRef), getValue(lRef)
+                    )
+                    mainStack.addFirst(
+                        if(r is UndefinedData) BooleanData(false) else r
+                    )
+                }
+                ByteCompiler.OpCode.LTE -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = abstractRelationalComparison(
+                        getValue(rRef), getValue(lRef)
+                    )
+                    mainStack.addFirst(
+                        if(r is UndefinedData || (r is BooleanData && r.value)) BooleanData(false)
+                        else BooleanData(true)
+                    )
+                }
+                ByteCompiler.OpCode.GTE -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = abstractRelationalComparison(
+                        getValue(lRef), getValue(rRef)
+                    )
+                    mainStack.addFirst(
+                        if(r is UndefinedData || (r is BooleanData && r.value)) BooleanData(false)
+                        else BooleanData(true)
+                    )
+                }
+                ByteCompiler.OpCode.InstanceOf -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    throw NotImplementedError()
+                }
+                ByteCompiler.OpCode.In -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    throw NotImplementedError()
+                }
             }
         }
         if(mainStack.size != 1) {
             println("stack finished unexpected size: ${mainStack.size}")
             return null
         }
-        return (mainStack.first() as? NumberData)?.value
+        return mainStack.first()
     }
 
     private fun operandToData(operand: String?): StackData {
@@ -302,6 +354,40 @@ class ToneVirtualMachine {
         //val posInt = sign(num) * floor(abs(num))
         //val int32bit = posInt % 2^32
         //return int32bit
+    }
+
+    //smallExpected < bigExpectedを評価する
+    //BooleanData or UndefinedDataのみを返す
+    private fun abstractRelationalComparison(
+        smallExpected: StackData, bigExpected: StackData): StackData {
+        val px = toPrimitive(smallExpected) //TODO: hint Number
+        val py = toPrimitive(bigExpected) //TODO: hint Number
+        //TODO: toPrimitiveに副作用がある場合は評価の順番を考える必要があるがどうか
+        if(px is ReferenceData && py is ReferenceData) { //TODO: Reference型じゃなくてString型のお話
+            throw NotImplementedError()
+            //11.8.5-4
+        }
+        else {
+            val nx = toNumber(px)
+            val ny = toNumber(py)
+            if(nx.kind == NumberData.NumberKind.NaN || ny.kind == NumberData.NumberKind.NaN) {
+                return UndefinedData()
+            }
+            if(nx == ny) { //TODO: 等号の確認
+                return BooleanData(false)
+            }
+            if(nx.kind == NumberData.NumberKind.ZeroP && ny.kind == NumberData.NumberKind.ZeroN) {
+                return BooleanData(false)
+            }
+            if(nx.kind == NumberData.NumberKind.ZeroN && ny.kind == NumberData.NumberKind.ZeroP) {
+                return BooleanData(false)
+            }
+            if(nx.kind == NumberData.NumberKind.InfinityP) return BooleanData(false)
+            if(ny.kind == NumberData.NumberKind.InfinityP) return BooleanData(true)
+            if(nx.kind == NumberData.NumberKind.InfinityN) return BooleanData(false)
+            if(ny.kind == NumberData.NumberKind.InfinityN) return BooleanData(true)
+            return BooleanData(nx.value < ny.value)
+        }
     }
 
     fun type(value: Int): ValueType {

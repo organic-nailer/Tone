@@ -18,7 +18,7 @@ class ToneTest {
         }
         val vm = ToneVirtualMachine()
         val result = vm.run(compiler.byteLines)
-        assertEquals(7, result)
+        assertEquals(7, (result as? ToneVirtualMachine.NumberData)?.value)
     }
 
     @Test
@@ -37,7 +37,7 @@ class ToneTest {
         }
         val vm = ToneVirtualMachine()
         val result = vm.run(compiler.byteLines)
-        assertEquals(1, result)
+        assertEquals(1, (result as? ToneVirtualMachine.NumberData)?.value)
     }
 
     @Test
@@ -56,6 +56,25 @@ class ToneTest {
         }
         val vm = ToneVirtualMachine()
         val result = vm.run(compiler.byteLines)
-        assertEquals(2562, result)
+        assertEquals(2562, (result as? ToneVirtualMachine.NumberData)?.value)
+    }
+
+    @Test
+    fun calcRelationTest() {
+        val parser: Parser = Parser()
+        val tokenizer = Tokenizer("(1 > 2) <= (1 < 2)")
+        val parsed = parser.parse(tokenizer.tokenized)
+        val node = parser.parsedNode ?: kotlin.run {
+            assert(false)
+            return
+        }
+        val compiler = ByteCompiler()
+        compiler.compile(node)
+        compiler.byteLines.forEach { op ->
+            println("${op.opCode} ${op.operand ?: ""}")
+        }
+        val vm = ToneVirtualMachine()
+        val result = vm.run(compiler.byteLines)
+        assertEquals(true, (result as? ToneVirtualMachine.BooleanData)?.value)
     }
 }

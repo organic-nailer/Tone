@@ -30,6 +30,12 @@ class ByteCompiler {
                     "<<" -> OpCode.ShiftL
                     ">>" -> OpCode.ShiftR
                     ">>>" -> OpCode.ShiftUR
+                    "<" -> OpCode.LT
+                    ">" -> OpCode.GT
+                    "<=" -> OpCode.LTE
+                    ">=" -> OpCode.GTE
+                    "instanceof" -> OpCode.InstanceOf
+                    "in" -> OpCode.In
                     else -> {
                         throw NotImplementedError()
                     }
@@ -56,6 +62,7 @@ class ByteCompiler {
     )
     enum class OpCode {
         Push, Pop, Add, Sub, Mul, Div, Rem,
-        ShiftL, ShiftR, ShiftUR, And, Or, Xor
+        ShiftL, ShiftR, ShiftUR, And, Or, Xor,
+        GT, GTE, LT, LTE, InstanceOf, In
     }
 }
