@@ -36,6 +36,10 @@ class ByteCompiler {
                     ">=" -> OpCode.GTE
                     "instanceof" -> OpCode.InstanceOf
                     "in" -> OpCode.In
+                    "==" -> OpCode.Eq
+                    "!=" -> OpCode.Neq
+                    "===" -> OpCode.EqS
+                    "!==" -> OpCode.NeqS
                     else -> {
                         throw NotImplementedError()
                     }
@@ -63,6 +67,7 @@ class ByteCompiler {
     enum class OpCode {
         Push, Pop, Add, Sub, Mul, Div, Rem,
         ShiftL, ShiftR, ShiftUR, And, Or, Xor,
-        GT, GTE, LT, LTE, InstanceOf, In
+        GT, GTE, LT, LTE, InstanceOf, In,
+        Eq, Neq, EqS, NeqS
     }
 }

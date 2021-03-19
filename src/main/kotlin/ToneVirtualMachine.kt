@@ -1,3 +1,5 @@
+import jdk.nashorn.internal.runtime.Undefined
+import java.sql.Ref
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -121,6 +123,38 @@ class ToneVirtualMachine {
                     val rRef = mainStack.removeFirst()
                     val lRef = mainStack.removeFirst()
                     throw NotImplementedError()
+                }
+                ByteCompiler.OpCode.Eq -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = abstractEqualityComparison(
+                        getValue(lRef), getValue(rRef)
+                    )
+                    mainStack.addFirst(r)
+                }
+                ByteCompiler.OpCode.Neq -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = abstractEqualityComparison(
+                        getValue(lRef), getValue(rRef)
+                    )
+                    mainStack.addFirst(BooleanData(!r.value))
+                }
+                ByteCompiler.OpCode.EqS -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = strictEqualityComparison(
+                        getValue(lRef), getValue(rRef)
+                    )
+                    mainStack.addFirst(r)
+                }
+                ByteCompiler.OpCode.NeqS -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val r = strictEqualityComparison(
+                        getValue(lRef), getValue(rRef)
+                    )
+                    mainStack.addFirst(BooleanData(!r.value))
                 }
             }
         }
@@ -388,6 +422,72 @@ class ToneVirtualMachine {
             if(ny.kind == NumberData.NumberKind.InfinityN) return BooleanData(true)
             return BooleanData(nx.value < ny.value)
         }
+    }
+
+    private fun abstractEqualityComparison(x: StackData, y: StackData): BooleanData {
+        if(x::class == y::class) { //同じTypeのとき
+            if(x is UndefinedData) return BooleanData(true)
+            if(x is NullData) return BooleanData(true)
+            if(x is NumberData) {
+                y as NumberData
+                if(x.kind == NumberData.NumberKind.NaN
+                    || y.kind == NumberData.NumberKind.NaN) return BooleanData(false)
+                if(x == y) return BooleanData(true)
+                if(x.kind == NumberData.NumberKind.ZeroP
+                    && y.kind == NumberData.NumberKind.ZeroN) return BooleanData(true)
+                if(x.kind == NumberData.NumberKind.ZeroN
+                    && y.kind == NumberData.NumberKind.ZeroP) return BooleanData(true)
+                return BooleanData(false)
+            }
+            if(x is ReferenceData) {
+                //StringかObjectのばあい
+                throw NotImplementedError()
+            }
+            if(x is BooleanData) {
+                y as BooleanData
+                return BooleanData(x.value == y.value)
+            }
+        }
+        if(x is NullData && y is UndefinedData) return BooleanData(true)
+        if(x is UndefinedData && y is NullData) return BooleanData(true)
+        if(x is NumberData && y is ReferenceData) { //TODO: String型のみ
+            return abstractEqualityComparison(x,toNumber(y))
+        }
+        if(x is ReferenceData && y is NumberData) { //TODO: String型のみ
+            return abstractEqualityComparison(toNumber(x),y)
+        }
+        if(x is BooleanData) {
+            return abstractEqualityComparison(toNumber(x),y)
+        }
+        if(y is BooleanData) {
+            return abstractEqualityComparison(x,toNumber(y))
+        }
+        if((x is ReferenceData || x is NumberData) && y is ReferenceData) {
+            //TODO: xがString or NumberかつyがObjectのとき
+            return abstractEqualityComparison(x, toPrimitive(y))
+        }
+        if(x is ReferenceData && (y is ReferenceData || y is NumberData)) {
+            //TODO: yがString or NumberかつxがObjectのとき
+            return abstractEqualityComparison(toPrimitive(x), y)
+        }
+        return BooleanData(false)
+    }
+
+    private fun strictEqualityComparison(x: StackData, y: StackData): BooleanData {
+        if(x::class != y::class) return BooleanData(false)
+        if(x is UndefinedData) return BooleanData(true)
+        if(x is NullData) return BooleanData(true)
+        if(x is NumberData) {
+            y as NumberData
+            if(x.kind == NumberData.NumberKind.NaN
+                || y.kind == NumberData.NumberKind.NaN) return BooleanData(false)
+            if(x == y) return BooleanData(true)
+            if(x.isZero() && y.isZero()) return BooleanData(true)
+            return BooleanData(false)
+        }
+        if(x is BooleanData) return BooleanData(x.value == (y as BooleanData).value)
+        if(x is ReferenceData) return BooleanData(x == y)
+        return BooleanData(false) //TODO: String, Objectの比較
     }
 
     fun type(value: Int): ValueType {
