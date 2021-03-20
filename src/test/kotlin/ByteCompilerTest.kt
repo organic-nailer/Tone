@@ -8,7 +8,7 @@ class ByteCompilerTest {
         val parsed = parser.parse(tokenizer.tokenized)
         val compiler = ByteCompiler()
         parser.parsedNode?.let {
-            compiler.compile(it)
+            compiler.run(it)
             println("compiled:")
             compiler.byteLines.forEach { op ->
                 println("${op.opCode} ${op.operand ?: ""}")

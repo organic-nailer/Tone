@@ -11,7 +11,7 @@ fun main(args: Array<String>) {
         return
     }
     val compiler = ByteCompiler()
-    compiler.compile(node)
+    compiler.run(node)
     val vm = ToneVirtualMachine()
     val result = vm.run(compiler.byteLines)
     println("result:")

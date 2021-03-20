@@ -6,10 +6,15 @@ import kotlin.math.sign
 class ToneVirtualMachine {
     fun run(code: List<ByteCompiler.ByteOperation>): StackData? {
         val mainStack = ArrayDeque<StackData>()
-        for(operation in code) {
+        var counter = 0
+        while(counter < code.size) {
+            val operation = code[counter]
             when(operation.opCode) {
                 ByteCompiler.OpCode.Push -> {
                     mainStack.addFirst(operandToData(operation.operand))
+                }
+                ByteCompiler.OpCode.Pop -> {
+                    mainStack.removeFirst()
                 }
                 ByteCompiler.OpCode.Mul,
                 ByteCompiler.OpCode.Div,
@@ -156,7 +161,24 @@ class ToneVirtualMachine {
                     )
                     mainStack.addFirst(BooleanData(!r.value))
                 }
+                ByteCompiler.OpCode.IfTrue -> {
+                    val ref = mainStack.first()
+                    val bin = toBoolean(getValue(ref))
+                    if(bin) {
+                        counter = operation.operand?.toInt()!!
+                        continue
+                    }
+                }
+                ByteCompiler.OpCode.IfFalse -> {
+                    val ref = mainStack.first()
+                    val bin = toBoolean(getValue(ref))
+                    if(!bin) {
+                        counter = operation.operand?.toInt()!!
+                        continue
+                    }
+                }
             }
+            counter++
         }
         if(mainStack.size != 1) {
             println("stack finished unexpected size: ${mainStack.size}")
@@ -388,6 +410,17 @@ class ToneVirtualMachine {
         //val posInt = sign(num) * floor(abs(num))
         //val int32bit = posInt % 2^32
         //return int32bit
+    }
+
+    private fun toBoolean(value: StackData): Boolean {
+        if(value is UndefinedData) return false
+        if(value is NullData) return false
+        if(value is BooleanData) return value.value
+        if(value is NumberData) {
+            if(value.isZero() || value.kind == NumberData.NumberKind.NaN) return false
+            return true
+        }
+        return true //TODO: StringとObject
     }
 
     //smallExpected < bigExpectedを評価する
