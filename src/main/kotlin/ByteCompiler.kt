@@ -91,6 +91,19 @@ class ByteCompiler {
                 }
                 byteLines.add(ByteOperation(code, null))
             }
+            NodeType.ConditionalExpression -> {
+                node.test?.let { compile(it) }
+                val label = "L${uniqueLabelIndex++}"
+                byteLines.add(ByteOperation(OpCode.IfFalse, label))
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+                node.consequent?.let { compile(it) }
+                val label2 = "L${uniqueLabelIndex++}"
+                byteLines.add(ByteOperation(OpCode.Goto, label2))
+                labelTable[label] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+                node.alternate?.let { compile(it) }
+                labelTable[label2] = byteLines.size
+            }
             NodeType.Literal -> {
                 if(node.raw == "null"
                     || node.raw == "undefined"
@@ -129,6 +142,6 @@ class ByteCompiler {
         ShiftL, ShiftR, ShiftUR, And, Or, Xor,
         GT, GTE, LT, LTE, InstanceOf, In,
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
-        Delete, Void, TypeOf, ToNum, Neg, Not, LogicalNot
+        Delete, Void, TypeOf, ToNum, Neg, Not, LogicalNot, Goto
     }
 }

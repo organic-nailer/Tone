@@ -96,4 +96,23 @@ class ToneTest {
         val result = vm.run(compiler.byteLines)
         assert(result is ToneVirtualMachine.NullData)
     }
+
+    @Test
+    fun calcConditionalExprTest() {
+        val parser: Parser = Parser()
+        val tokenizer = Tokenizer("2?!1:3")
+        val parsed = parser.parse(tokenizer.tokenized)
+        val node = parser.parsedNode ?: kotlin.run {
+            assert(false)
+            return
+        }
+        val compiler = ByteCompiler()
+        compiler.run(node)
+        compiler.byteLines.forEach { op ->
+            println("${op.opCode} ${op.operand ?: ""}")
+        }
+        val vm = ToneVirtualMachine()
+        val result = vm.run(compiler.byteLines)
+        assertEquals(false, (result as? ToneVirtualMachine.BooleanData)?.value)
+    }
 }

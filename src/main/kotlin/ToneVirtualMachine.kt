@@ -177,6 +177,10 @@ class ToneVirtualMachine {
                         continue
                     }
                 }
+                ByteCompiler.OpCode.Goto -> {
+                    counter = operation.operand?.toInt()!!
+                    continue
+                }
                 ByteCompiler.OpCode.Delete -> {
                     val ref = mainStack.removeFirst()
                     if(ref !is ReferenceData) {
