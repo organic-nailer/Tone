@@ -190,10 +190,9 @@ class ToneVirtualMachine {
                         throw NotImplementedError()
                     }
                 }
-                ByteCompiler.OpCode.Void -> {
-                    val expr = mainStack.removeFirst()
+                ByteCompiler.OpCode.GetValue -> {
+                    val expr = mainStack.first()
                     getValue(expr)
-                    mainStack.addFirst(UndefinedData())
                 }
                 ByteCompiler.OpCode.TypeOf -> {
                     throw NotImplementedError()

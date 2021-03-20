@@ -79,9 +79,14 @@ class ByteCompiler {
             }
             NodeType.UnaryExpression -> {
                 node.argument?.let { compile(it) }
+                if(node.operator == "void") {
+                    byteLines.add(ByteOperation(OpCode.GetValue, null))
+                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    byteLines.add(ByteOperation(OpCode.Push, "undefined"))
+                    return
+                }
                 val code = when(node.operator) {
                     "delete" -> OpCode.Delete
-                    "void" -> OpCode.Void
                     "typeof" -> OpCode.TypeOf
                     "+" -> OpCode.ToNum
                     "-" -> OpCode.Neg
@@ -103,6 +108,15 @@ class ByteCompiler {
                 byteLines.add(ByteOperation(OpCode.Pop, null))
                 node.alternate?.let { compile(it) }
                 labelTable[label2] = byteLines.size
+            }
+            NodeType.SequenceExpression -> {
+                node.expressions?.forEachIndexed { i, expr ->
+                    compile(expr)
+                    byteLines.add(ByteOperation(OpCode.GetValue, null))
+                    if(i+1 != node.expressions.size) {
+                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                    }
+                }
             }
             NodeType.Literal -> {
                 if(node.raw == "null"
@@ -142,6 +156,7 @@ class ByteCompiler {
         ShiftL, ShiftR, ShiftUR, And, Or, Xor,
         GT, GTE, LT, LTE, InstanceOf, In,
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
-        Delete, Void, TypeOf, ToNum, Neg, Not, LogicalNot, Goto
+        Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
+        GetValue
     }
 }

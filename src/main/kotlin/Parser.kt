@@ -753,9 +753,33 @@ class Parser {
                 LeftHandSideExpression.ordinal,
                 LeftHandSideExpressionForStmt.ordinal,
                 ExpressionNoIn.ordinal,
-                ExpressionForStmt.ordinal,
-                Expression.ordinal -> {
+                ExpressionForStmt.ordinal -> {
                     children[0].toNode()
+                }
+                Expression.ordinal -> {
+                    if(children.size == 3) {
+                        val expressionsList = mutableListOf<Node>()
+                        var node = this
+                        while(true) {
+                            if(node.children.size == 1) {
+                                expressionsList.add(0,node.children[0].toNode())
+                                break
+                            }
+                            expressionsList.add(0,node.children[0].toNode())
+                            node = node.children[2]
+                        }
+                        Node(
+                            type = NodeType.SequenceExpression,
+                            loc = Location(
+                                start = this.start ?: Position(-1,-1),
+                                end = this.end ?: Position(-1,-1)
+                            ),
+                            expressions = expressionsList
+                        )
+                    }
+                    else {
+                        children[0].toNode()
+                    }
                 }
                 AssignmentExpressionForStmt.ordinal,
                 AssignmentExpressionNoIn.ordinal,
@@ -1345,6 +1369,7 @@ class Parser {
         val properties: List<Node>? = null,
         val valueNode: Node? = null,
         val key: Node? = null,
+        val expressions: List<Node>? = null,
         val operator: String? = null,
         val computed: Boolean? = null,
         val value: String? = null, //変換したものをStringで出力
@@ -1369,7 +1394,7 @@ class Parser {
         SwitchCase, LabeledStatement, ThrowStatement,
         TryStatement, CatchClause, DebuggerStatement,
         FunctionDeclaration, FunctionExpression,
-        ObjectExpression, Property,
+        ObjectExpression, Property, SequenceExpression,
         UNKNOWN
     }
     @Serializable
