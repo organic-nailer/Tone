@@ -77,6 +77,20 @@ class ByteCompiler {
                     else -> throw Exception()
                 }
             }
+            NodeType.UnaryExpression -> {
+                node.argument?.let { compile(it) }
+                val code = when(node.operator) {
+                    "delete" -> OpCode.Delete
+                    "void" -> OpCode.Void
+                    "typeof" -> OpCode.TypeOf
+                    "+" -> OpCode.ToNum
+                    "-" -> OpCode.Neg
+                    "~" -> OpCode.Not
+                    "!" -> OpCode.LogicalNot
+                    else -> throw Exception()
+                }
+                byteLines.add(ByteOperation(code, null))
+            }
             NodeType.Literal -> {
                 if(node.raw == "null"
                     || node.raw == "undefined"
@@ -114,6 +128,7 @@ class ByteCompiler {
         Push, Pop, Add, Sub, Mul, Div, Rem,
         ShiftL, ShiftR, ShiftUR, And, Or, Xor,
         GT, GTE, LT, LTE, InstanceOf, In,
-        Eq, Neq, EqS, NeqS, IfTrue, IfFalse
+        Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
+        Delete, Void, TypeOf, ToNum, Neg, Not, LogicalNot
     }
 }

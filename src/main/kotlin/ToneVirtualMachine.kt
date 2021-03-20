@@ -177,6 +177,48 @@ class ToneVirtualMachine {
                         continue
                     }
                 }
+                ByteCompiler.OpCode.Delete -> {
+                    val ref = mainStack.removeFirst()
+                    if(ref !is ReferenceData) {
+                        mainStack.addFirst(BooleanData(true))
+                    }
+                    else {
+                        throw NotImplementedError()
+                    }
+                }
+                ByteCompiler.OpCode.Void -> {
+                    val expr = mainStack.removeFirst()
+                    getValue(expr)
+                    mainStack.addFirst(UndefinedData())
+                }
+                ByteCompiler.OpCode.TypeOf -> {
+                    throw NotImplementedError()
+                }
+                ByteCompiler.OpCode.ToNum -> {
+                    val expr = mainStack.removeFirst()
+                    mainStack.addFirst(
+                        toNumber(getValue(expr))
+                    )
+                }
+                ByteCompiler.OpCode.Neg -> {
+                    val expr = mainStack.removeFirst()
+                    val oldValue = toNumber(getValue(expr))
+                    mainStack.addFirst(-oldValue)
+                }
+                ByteCompiler.OpCode.Not -> {
+                    val expr = mainStack.removeFirst()
+                    val oldValue = toInt32(getValue(expr))
+                    mainStack.addFirst(
+                        NumberData.real(oldValue.inv())
+                    )
+                }
+                ByteCompiler.OpCode.LogicalNot -> {
+                    val expr = mainStack.removeFirst()
+                    val oldValue = toBoolean(getValue(expr))
+                    mainStack.addFirst(
+                        BooleanData(!oldValue)
+                    )
+                }
             }
             counter++
         }
