@@ -18,11 +18,63 @@ class ByteCompiler {
                 node.body?.forEach { compile(it) }
                 return
             }
+            //Statementは評価後一つの値を残す。値がない場合はemptyを残す
             NodeType.ExpressionStatement -> {
                 node.expression?.let {
                     compile(it)
                 }
                 return
+            }
+            NodeType.BlockStatement -> {
+                if(node.body.isNullOrEmpty()) {
+                    byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                }
+                else {
+                    //Stackには最新の結果のみを残すようにする
+                    //ただしemptyの場合は前の結果を残す
+                    node.body.forEachIndexed { i, element ->
+                        compile(element)
+                        if(i != 0) {
+                            val label = "L${uniqueLabelIndex++}"
+                            byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                            byteLines.add(ByteOperation(OpCode.Swap, null))
+                            labelTable[label] = byteLines.size
+                            byteLines.add(ByteOperation(OpCode.Pop, null))
+                        }
+                    }
+                }
+                return
+            }
+            NodeType.EmptyStatement -> {
+                byteLines.add(ByteOperation(OpCode.Push, "empty"))
+            }
+            NodeType.IfStatement -> {
+                if(node.alternate == null) { //elseなし
+                    node.test?.let { compile(it) }
+                    val label = "L${uniqueLabelIndex++}"
+                    byteLines.add(ByteOperation(OpCode.IfFalse, label))
+                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    node.consequent?.let { compile(it) }
+                    val label2 = "L${uniqueLabelIndex++}"
+                    byteLines.add(ByteOperation(OpCode.Goto, label2))
+                    labelTable[label] = byteLines.size
+                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                    labelTable[label2] = byteLines.size
+                }
+                else { //elseあり
+                    node.test?.let { compile(it) }
+                    val label = "L${uniqueLabelIndex++}"
+                    byteLines.add(ByteOperation(OpCode.IfFalse, label))
+                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    node.consequent?.let { compile(it) }
+                    val label2 = "L${uniqueLabelIndex++}"
+                    byteLines.add(ByteOperation(OpCode.Goto, label2))
+                    labelTable[label] = byteLines.size
+                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    compile(node.alternate)
+                    labelTable[label2] = byteLines.size
+                }
             }
             NodeType.BinaryExpression -> {
                 node.left?.let { compile(it) }
@@ -157,6 +209,6 @@ class ByteCompiler {
         GT, GTE, LT, LTE, InstanceOf, In,
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
-        GetValue
+        GetValue, IfEmpty, Swap
     }
 }

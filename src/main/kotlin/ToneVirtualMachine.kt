@@ -177,6 +177,13 @@ class ToneVirtualMachine {
                         continue
                     }
                 }
+                ByteCompiler.OpCode.IfEmpty -> {
+                    val ref = mainStack.first()
+                    if(ref is EmptyData) {
+                        counter = operation.operand?.toInt()!!
+                        continue
+                    }
+                }
                 ByteCompiler.OpCode.Goto -> {
                     counter = operation.operand?.toInt()!!
                     continue
@@ -222,6 +229,12 @@ class ToneVirtualMachine {
                         BooleanData(!oldValue)
                     )
                 }
+                ByteCompiler.OpCode.Swap -> {
+                    val first = mainStack.removeFirst()
+                    val second = mainStack.removeFirst()
+                    mainStack.addFirst(first)
+                    mainStack.addFirst(second)
+                }
             }
             counter++
         }
@@ -244,6 +257,9 @@ class ToneVirtualMachine {
         }
         if(operand == "false") {
             return BooleanData(false)
+        }
+        if(operand == "empty") {
+            return EmptyData()
         }
         operand?.toIntOrNull()?.let {
             return NumberData(NumberData.NumberKind.Real, it)
@@ -402,6 +418,7 @@ class ToneVirtualMachine {
     data class ReferenceData(
         val value: Int
     ): StackData
+    class EmptyData: StackData
 
     private fun getValue(value: StackData): StackData {
         return value
