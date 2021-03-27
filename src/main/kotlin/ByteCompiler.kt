@@ -4,10 +4,14 @@ class ByteCompiler {
     val byteLines: MutableList<ByteOperation> = mutableListOf()
     private val labelTable: MutableMap<String, Int> = mutableMapOf()
     private var uniqueLabelIndex = 0
+    private val contextStack = ArrayDeque<ExecutionContext>()
+    val refPoolManager = RefPoolManager()
+
 
     fun run(node: Node) {
         byteLines.clear()
         labelTable.clear()
+        contextStack.clear()
         compile(node)
         replaceLabel()
     }
@@ -15,7 +19,27 @@ class ByteCompiler {
     private fun compile(node: Node) {
         when(node.type) {
             NodeType.Program -> {
-                node.body?.forEach { compile(it) }
+                if(node.body.isNullOrEmpty()) {
+                    byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                    return
+                }
+                val progCxt = ExecutionContext.global(refPoolManager)
+                declarationBindingInstantiation(
+                    progCxt.variableEnvironment, node.body,
+                    ContextMode.Global, false //TODO: Strict
+                )
+                contextStack.addFirst(progCxt)
+                node.body.forEachIndexed { i, element ->
+                    compile(element)
+                    if(i != 0) {
+                        val label = "L${uniqueLabelIndex++}"
+                        byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                        byteLines.add(ByteOperation(OpCode.Swap, null))
+                        labelTable[label] = byteLines.size
+                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                    }
+                }
+                contextStack.removeFirst()
                 return
             }
             //Statementは評価後一つの値を残す。値がない場合はemptyを残す
@@ -75,6 +99,10 @@ class ByteCompiler {
                     compile(node.alternate)
                     labelTable[label2] = byteLines.size
                 }
+            }
+            NodeType.VariableDeclaration -> {
+                //TODO: Implement
+                byteLines.add(ByteOperation(OpCode.Push, "empty"))
             }
             NodeType.BinaryExpression -> {
                 node.left?.let { compile(it) }
@@ -172,7 +200,6 @@ class ByteCompiler {
             }
             NodeType.Literal -> {
                 if(node.raw == "null"
-                    || node.raw == "undefined"
                     || node.raw == "true"
                     || node.raw == "false") {
                     byteLines.add(ByteOperation(OpCode.Push, node.raw))
@@ -184,8 +211,19 @@ class ByteCompiler {
                 }
                 throw NotImplementedError()
             }
+            NodeType.Identifier -> {
+                val identifier = node.name!!
+                val resolved = contextStack.first()
+                    .resolveIdentifier(identifier, false) //TODO: strict
+                val desc = (resolved.base as? EnvironmentRecords)?.getBindingValue(resolved.referencedName, false)
+                desc?.address?.let {
+                    byteLines.add(ByteOperation(OpCode.Push, "#$it"))
+                } ?: kotlin.run {
+                    byteLines.add(ByteOperation(OpCode.Push, "undefined"))
+                }
+            }
             else -> {
-                throw NotImplementedError()
+                throw NotImplementedError("${node.type} is Not Implemented")
             }
         }
     }
@@ -210,5 +248,23 @@ class ByteCompiler {
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
         GetValue, IfEmpty, Swap
+    }
+
+    class RefPoolManager() {
+        val referencePool = mutableListOf<ReferenceData>()
+
+        fun setReference(descriptor: ObjectData.PropertyDescriptor, name: String, strict: Boolean): ObjectData.PropertyDescriptor {
+            referencePool.add(ReferenceData(
+                descriptor.value, name, strict
+            ))
+            return descriptor.copy(address = referencePool.size -1)
+        }
+
+        fun reassign(address: Int, descriptor: ObjectData.PropertyDescriptor, name: String, strict: Boolean): ObjectData.PropertyDescriptor {
+            referencePool[address] = ReferenceData(
+                descriptor.value, name, strict
+            )
+            return descriptor.copy(address = address)
+        }
     }
 }

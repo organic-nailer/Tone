@@ -1,10 +1,17 @@
-import jdk.nashorn.internal.runtime.Undefined
-import java.sql.Ref
-import kotlin.math.abs
-import kotlin.math.sign
+import TypeConverter.toBoolean
+import TypeConverter.toInt32
+import TypeConverter.toNumber
+import TypeConverter.toPrimitive
+import TypeConverter.toUInt32
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 class ToneVirtualMachine {
-    fun run(code: List<ByteCompiler.ByteOperation>): StackData? {
+    var referencePool: List<ReferenceData?>? = null
+    fun run(
+        code: List<ByteCompiler.ByteOperation>,
+        refPool: List<ReferenceData?>
+    ): StackData? {
+        referencePool = refPool
         val mainStack = ArrayDeque<StackData>()
         var counter = 0
         while(counter < code.size) {
@@ -15,6 +22,7 @@ class ToneVirtualMachine {
                 }
                 ByteCompiler.OpCode.Pop -> {
                     mainStack.removeFirst()
+
                 }
                 ByteCompiler.OpCode.Mul,
                 ByteCompiler.OpCode.Div,
@@ -33,7 +41,7 @@ class ToneVirtualMachine {
                         ByteCompiler.OpCode.Sub -> leftNum - rightNum //TODO: 厳密な計算
                         else -> throw Exception()
                     }
-                    mainStack.addFirst(result)
+                    mainStack.addFirst(result.toStack())
                 }
                 ByteCompiler.OpCode.Add -> {
                     val rRef = mainStack.removeFirst()
@@ -42,10 +50,10 @@ class ToneVirtualMachine {
                     val lVal = getValue(lRef)
                     val rPrim = toPrimitive(rVal)
                     val lPrim = toPrimitive(lVal)
-                    if(lPrim is ReferenceData || lPrim is ReferenceData) {
+                    if(lPrim is StringData || lPrim is ObjectData) {
                         throw NotImplementedError()
                     }
-                    mainStack.addFirst(toNumber(lPrim) + toNumber(rPrim))
+                    mainStack.addFirst((toNumber(lPrim) + toNumber(rPrim)).toStack())
                 }
                 ByteCompiler.OpCode.ShiftL,
                 ByteCompiler.OpCode.ShiftR,
@@ -60,7 +68,7 @@ class ToneVirtualMachine {
                         ByteCompiler.OpCode.ShiftUR -> lNum ushr shiftCount
                         else -> throw Exception()
                     }
-                    mainStack.addFirst(NumberData(NumberData.NumberKind.Real, result))
+                    mainStack.addFirst(NumberData(NumberData.NumberKind.Real, result).toStack())
                 }
                 ByteCompiler.OpCode.And,
                 ByteCompiler.OpCode.Or,
@@ -75,7 +83,7 @@ class ToneVirtualMachine {
                         ByteCompiler.OpCode.Xor -> lNum xor rNum
                         else -> throw Exception()
                     }
-                    mainStack.addFirst(NumberData(NumberData.NumberKind.Real, result))
+                    mainStack.addFirst(NumberData(NumberData.NumberKind.Real, result).toStack())
                 }
                 ByteCompiler.OpCode.LT -> {
                     val rRef = mainStack.removeFirst()
@@ -84,7 +92,7 @@ class ToneVirtualMachine {
                         getValue(lRef), getValue(rRef)
                     )
                     mainStack.addFirst(
-                        if(r is UndefinedData) BooleanData(false) else r
+                        if(r is UndefinedData) BooleanStackData(false) else r.toStack()
                     )
                 }
                 ByteCompiler.OpCode.GT -> {
@@ -94,7 +102,7 @@ class ToneVirtualMachine {
                         getValue(rRef), getValue(lRef)
                     )
                     mainStack.addFirst(
-                        if(r is UndefinedData) BooleanData(false) else r
+                        if(r is UndefinedData) BooleanStackData(false) else r.toStack()
                     )
                 }
                 ByteCompiler.OpCode.LTE -> {
@@ -104,8 +112,8 @@ class ToneVirtualMachine {
                         getValue(rRef), getValue(lRef)
                     )
                     mainStack.addFirst(
-                        if(r is UndefinedData || (r is BooleanData && r.value)) BooleanData(false)
-                        else BooleanData(true)
+                        if(r is UndefinedData || (r is BooleanData && r.value)) BooleanStackData(false)
+                        else BooleanStackData(true)
                     )
                 }
                 ByteCompiler.OpCode.GTE -> {
@@ -115,8 +123,8 @@ class ToneVirtualMachine {
                         getValue(lRef), getValue(rRef)
                     )
                     mainStack.addFirst(
-                        if(r is UndefinedData || (r is BooleanData && r.value)) BooleanData(false)
-                        else BooleanData(true)
+                        if(r is UndefinedData || (r is BooleanData && r.value)) BooleanStackData(false)
+                        else BooleanStackData(true)
                     )
                 }
                 ByteCompiler.OpCode.InstanceOf -> {
@@ -135,7 +143,7 @@ class ToneVirtualMachine {
                     val r = abstractEqualityComparison(
                         getValue(lRef), getValue(rRef)
                     )
-                    mainStack.addFirst(r)
+                    mainStack.addFirst(r.toStack())
                 }
                 ByteCompiler.OpCode.Neq -> {
                     val rRef = mainStack.removeFirst()
@@ -143,7 +151,7 @@ class ToneVirtualMachine {
                     val r = abstractEqualityComparison(
                         getValue(lRef), getValue(rRef)
                     )
-                    mainStack.addFirst(BooleanData(!r.value))
+                    mainStack.addFirst(BooleanStackData(!r.value))
                 }
                 ByteCompiler.OpCode.EqS -> {
                     val rRef = mainStack.removeFirst()
@@ -151,7 +159,7 @@ class ToneVirtualMachine {
                     val r = strictEqualityComparison(
                         getValue(lRef), getValue(rRef)
                     )
-                    mainStack.addFirst(r)
+                    mainStack.addFirst(r.toStack())
                 }
                 ByteCompiler.OpCode.NeqS -> {
                     val rRef = mainStack.removeFirst()
@@ -159,7 +167,7 @@ class ToneVirtualMachine {
                     val r = strictEqualityComparison(
                         getValue(lRef), getValue(rRef)
                     )
-                    mainStack.addFirst(BooleanData(!r.value))
+                    mainStack.addFirst(BooleanStackData(!r.value))
                 }
                 ByteCompiler.OpCode.IfTrue -> {
                     val ref = mainStack.first()
@@ -179,7 +187,7 @@ class ToneVirtualMachine {
                 }
                 ByteCompiler.OpCode.IfEmpty -> {
                     val ref = mainStack.first()
-                    if(ref is EmptyData) {
+                    if(ref is EmptyStackData) {
                         counter = operation.operand?.toInt()!!
                         continue
                     }
@@ -190,8 +198,8 @@ class ToneVirtualMachine {
                 }
                 ByteCompiler.OpCode.Delete -> {
                     val ref = mainStack.removeFirst()
-                    if(ref !is ReferenceData) {
-                        mainStack.addFirst(BooleanData(true))
+                    if(ref !is ReferenceStackData) {
+                        mainStack.addFirst(BooleanStackData(true))
                     }
                     else {
                         throw NotImplementedError()
@@ -207,26 +215,26 @@ class ToneVirtualMachine {
                 ByteCompiler.OpCode.ToNum -> {
                     val expr = mainStack.removeFirst()
                     mainStack.addFirst(
-                        toNumber(getValue(expr))
+                        toNumber(getValue(expr)).toStack()
                     )
                 }
                 ByteCompiler.OpCode.Neg -> {
                     val expr = mainStack.removeFirst()
                     val oldValue = toNumber(getValue(expr))
-                    mainStack.addFirst(-oldValue)
+                    mainStack.addFirst((-oldValue).toStack())
                 }
                 ByteCompiler.OpCode.Not -> {
                     val expr = mainStack.removeFirst()
                     val oldValue = toInt32(getValue(expr))
                     mainStack.addFirst(
-                        NumberData.real(oldValue.inv())
+                        NumberData.real(oldValue.inv()).toStack()
                     )
                 }
                 ByteCompiler.OpCode.LogicalNot -> {
                     val expr = mainStack.removeFirst()
                     val oldValue = toBoolean(getValue(expr))
                     mainStack.addFirst(
-                        BooleanData(!oldValue)
+                        BooleanStackData(!oldValue)
                     )
                 }
                 ByteCompiler.OpCode.Swap -> {
@@ -247,252 +255,62 @@ class ToneVirtualMachine {
 
     private fun operandToData(operand: String?): StackData {
         if(operand == "null") {
-            return NullData()
+            return NullStackData()
         }
         if(operand == "undefined") {
-            return UndefinedData()
+            return UndefinedStackData()
         }
         if(operand == "true") {
-            return BooleanData(true)
+            return BooleanStackData(true)
         }
         if(operand == "false") {
-            return BooleanData(false)
+            return BooleanStackData(false)
         }
         if(operand == "empty") {
-            return EmptyData()
+            return EmptyStackData()
+        }
+        if(operand?.startsWith("#") == true) {
+            operand.substring(1).toIntOrNull()?.let {
+                return ReferenceStackData(it)
+            }
         }
         operand?.toIntOrNull()?.let {
-            return NumberData(NumberData.NumberKind.Real, it)
+            return NumberStackData(NumberData.NumberKind.Real, it)
         }
         throw NotImplementedError()
     }
 
-    interface StackData
-    data class NumberData(
-        val kind: NumberKind,
-        val value: Int
-    ): StackData {
-        enum class NumberKind {
-            Real, ZeroP, ZeroN, InfinityP, InfinityN, NaN
-        }
-
-        companion object {
-            fun naN() = NumberData(NumberKind.NaN, 0)
-            fun zeroP() = NumberData(NumberKind.ZeroP, 0)
-            fun zeroN() = NumberData(NumberKind.ZeroN, 0)
-            fun infiniteP() = NumberData(NumberKind.InfinityP, 0)
-            fun infiniteN() = NumberData(NumberKind.InfinityN, 0)
-            fun real(v: Int): NumberData {
-                if(v == 0) return zeroP()
-                return NumberData(NumberKind.Real, v)
-            }
-        }
-
-        fun isZero() = kind == NumberKind.ZeroP || kind == NumberKind.ZeroN
-        fun isInfinite() = kind == NumberKind.InfinityP || kind == NumberKind.InfinityN
-        fun sign() = when(kind) {
-            NumberKind.NaN,
-            NumberKind.ZeroP,
-            NumberKind.InfinityP -> true
-            NumberKind.ZeroN,
-            NumberKind.InfinityN -> false
-            NumberKind.Real -> value >= 0 //TODO: 厳密にはどうなの？
-        }
-
-        operator fun plus(other: NumberData): NumberData {
-            if(this.kind == NumberKind.NaN
-                || other.kind == NumberKind.NaN) return naN()
-            if((this.kind == NumberKind.InfinityP && other.kind == NumberKind.InfinityN)
-                || (this.kind == NumberKind.InfinityN && other.kind == NumberKind.InfinityP)) {
-                return naN()
-            }
-            if(this.kind == NumberKind.InfinityP || other.kind == NumberKind.InfinityP) {
-                return this
-            }
-            if(this.kind == NumberKind.InfinityN || other.kind == NumberKind.InfinityN) {
-                return this
-            }
-            if(this.kind == NumberKind.ZeroN && other.kind == NumberKind.ZeroN) {
-                return this
-            }
-            if(this.kind == NumberKind.ZeroP
-                && (other.kind == NumberKind.ZeroP || other.kind == NumberKind.ZeroN)) {
-                return this
-            }
-            if(other.kind == NumberKind.ZeroP
-                && (this.kind == NumberKind.ZeroP || this.kind == NumberKind.ZeroN)) {
-                return other
-            }
-            if(this.kind == NumberKind.ZeroN || this.kind == NumberKind.ZeroP) {
-                return other
-            }
-            if(other.kind == NumberKind.ZeroN || other.kind == NumberKind.ZeroP) {
-                return this
-            }
-            if(this.value.sign + this.value.sign == 0
-                && abs(this.value) == abs(this.value)) {
-                return zeroP()
-            }
-            return real(this.value + other.value) //TODO: 正確な処理
-        }
-
-        operator fun minus(other: NumberData): NumberData {
-            return this + (-other)
-        }
-
-        operator fun unaryMinus(): NumberData {
-            return when(this.kind) {
-                NumberKind.Real -> real(-this.value)
-                NumberKind.ZeroP -> zeroN()
-                NumberKind.ZeroN -> zeroP()
-                NumberKind.InfinityP -> infiniteN()
-                NumberKind.InfinityN -> infiniteP()
-                NumberKind.NaN -> this
-            }
-        }
-
-        operator fun times(other: NumberData): NumberData {
-            if(this.kind == NumberKind.NaN
-                || other.kind == NumberKind.NaN) return naN()
-            if((this.isZero() && other.isInfinite())
-                || (this.isInfinite() && this.isZero())) {
-                return naN()
-            }
-            val sign = this.sign() == other.sign()
-            if(this.isInfinite() && other.isInfinite()) {
-                return if(sign) infiniteP() else infiniteN()
-            }
-            if(this.isZero() || other.isZero()) {
-                return if(sign) zeroP() else zeroN()
-            }
-            if(this.isInfinite() || other.isInfinite()) {
-                return if(sign) infiniteP() else infiniteN()
-            }
-            return real(this.value * other.value) //TODO: 正確な処理
-        }
-
-        operator fun div(other: NumberData): NumberData {
-            if(this.kind == NumberKind.NaN
-                || other.kind == NumberKind.NaN) return naN()
-            if(this.isZero() && other.isZero()) {
-                return naN()
-            }
-            if(this.isInfinite() && other.isInfinite()) {
-                return naN()
-            }
-            val sign = this.sign() == other.sign()
-            if(this.isInfinite() && this.isZero()) {
-                return if(sign) infiniteP() else infiniteN()
-            }
-            if(this.isInfinite()) {
-                return if(sign) infiniteP() else infiniteN()
-            }
-            if(other.isInfinite()) {
-                return if(sign) zeroP() else zeroN()
-            }
-            if(other.isZero()) {
-                return if(sign) infiniteP() else infiniteN()
-            }
-            return real(this.value / other.value) //TODO: 正確な処理
-        }
-
-        operator fun rem(other: NumberData): NumberData {
-            if(this.kind == NumberKind.NaN
-                || other.kind == NumberKind.NaN) return naN()
-            if(this.isInfinite() || other.isZero()) return naN()
-            if(this.isInfinite() && other.isInfinite()) return this
-            if(other.isInfinite()) return this
-            if(this.isZero()) return this
-            return real(this.value % other.value) //TODO: 正確な処理
-        }
-    }
-    data class NullData(
-        val value: Int = 0
-    ): StackData
-    data class UndefinedData(
-        val value: Int = 0
-    ): StackData
-    data class BooleanData(
-        val value: Boolean
-    ): StackData
-    data class ReferenceData(
-        val value: Int
-    ): StackData
-    class EmptyData: StackData
-
-    private fun getValue(value: StackData): StackData {
-        return value
-    }
-
-    private fun toPrimitive(value: StackData): StackData {
-        return value
-    }
-
-    private fun toNumber(value: StackData): NumberData {
+    private fun getValue(value: StackData): EcmaData {
         return when(value) {
-            is UndefinedData -> {
-                throw NotImplementedError()
+            is NumberStackData -> NumberData(value.kind,value.value)
+            is NullStackData -> NullData()
+            is UndefinedStackData -> UndefinedData()
+            is BooleanStackData -> BooleanData(value.value)
+            is StringStackData -> throw NotImplementedError()
+            is ObjectStackData -> throw NotImplementedError()
+            is ReferenceStackData -> {
+                val data = referencePool?.get(value.address) ?: throw Exception()
+                if(data.isUnresolvableReference()) throw Exception("ReferenceError")
+                if(data.isPropertyReference()) {
+                    //TODO: 読んでもよくわからんかった
+                    data.base as EcmaData
+                }
+                else {
+                    data.base as EcmaData
+                }
             }
-            is NullData -> NumberData(NumberData.NumberKind.ZeroP, 0)
-            is BooleanData -> {
-                if(value.value) NumberData(NumberData.NumberKind.Real, 1)
-                else NumberData(NumberData.NumberKind.ZeroP, 0)
-            }
-            is NumberData -> value
-            is ReferenceData -> throw NotImplementedError()
             else -> throw Exception()
         }
-    }
-
-    private fun toInt32(value: StackData): Int {
-        val num = toNumber(value)
-        if(num.kind == NumberData.NumberKind.NaN
-            || num.kind == NumberData.NumberKind.ZeroP
-            || num.kind == NumberData.NumberKind.ZeroN
-            || num.kind == NumberData.NumberKind.InfinityP
-            || num.kind == NumberData.NumberKind.InfinityN) {
-            return 0
-        }
-        return num.value //TODO: 正確な
-        //val posInt = sign(num) * floor(abs(num))
-        //val int32bit = posInt % 2^32
-        //return if(int32bit >= 2^31) int32bit - 2^32 else int32bit
-    }
-
-    private fun toUInt32(value: StackData): Int {
-        val num = toNumber(value)
-        if(num.kind == NumberData.NumberKind.NaN
-            || num.kind == NumberData.NumberKind.ZeroP
-            || num.kind == NumberData.NumberKind.ZeroN
-            || num.kind == NumberData.NumberKind.InfinityP
-            || num.kind == NumberData.NumberKind.InfinityN) {
-            return 0
-        }
-        return abs(num.value) //TODO: 正確な
-        //val posInt = sign(num) * floor(abs(num))
-        //val int32bit = posInt % 2^32
-        //return int32bit
-    }
-
-    private fun toBoolean(value: StackData): Boolean {
-        if(value is UndefinedData) return false
-        if(value is NullData) return false
-        if(value is BooleanData) return value.value
-        if(value is NumberData) {
-            if(value.isZero() || value.kind == NumberData.NumberKind.NaN) return false
-            return true
-        }
-        return true //TODO: StringとObject
     }
 
     //smallExpected < bigExpectedを評価する
     //BooleanData or UndefinedDataのみを返す
     private fun abstractRelationalComparison(
-        smallExpected: StackData, bigExpected: StackData): StackData {
+        smallExpected: EcmaData, bigExpected: EcmaData): EcmaData {
         val px = toPrimitive(smallExpected) //TODO: hint Number
         val py = toPrimitive(bigExpected) //TODO: hint Number
         //TODO: toPrimitiveに副作用がある場合は評価の順番を考える必要があるがどうか
-        if(px is ReferenceData && py is ReferenceData) { //TODO: Reference型じゃなくてString型のお話
+        if(px is StringData && py is StringData) {
             throw NotImplementedError()
             //11.8.5-4
         }
@@ -519,7 +337,7 @@ class ToneVirtualMachine {
         }
     }
 
-    private fun abstractEqualityComparison(x: StackData, y: StackData): BooleanData {
+    private fun abstractEqualityComparison(x: EcmaData, y: EcmaData): BooleanData {
         if(x::class == y::class) { //同じTypeのとき
             if(x is UndefinedData) return BooleanData(true)
             if(x is NullData) return BooleanData(true)
@@ -534,8 +352,10 @@ class ToneVirtualMachine {
                     && y.kind == NumberData.NumberKind.ZeroP) return BooleanData(true)
                 return BooleanData(false)
             }
-            if(x is ReferenceData) {
-                //StringかObjectのばあい
+            if(x is StringData) {
+                throw NotImplementedError()
+            }
+            if(x is ObjectData) {
                 throw NotImplementedError()
             }
             if(x is BooleanData) {
@@ -545,10 +365,10 @@ class ToneVirtualMachine {
         }
         if(x is NullData && y is UndefinedData) return BooleanData(true)
         if(x is UndefinedData && y is NullData) return BooleanData(true)
-        if(x is NumberData && y is ReferenceData) { //TODO: String型のみ
+        if(x is NumberData && y is StringData) {
             return abstractEqualityComparison(x,toNumber(y))
         }
-        if(x is ReferenceData && y is NumberData) { //TODO: String型のみ
+        if(x is StringData && y is NumberData) {
             return abstractEqualityComparison(toNumber(x),y)
         }
         if(x is BooleanData) {
@@ -557,18 +377,16 @@ class ToneVirtualMachine {
         if(y is BooleanData) {
             return abstractEqualityComparison(x,toNumber(y))
         }
-        if((x is ReferenceData || x is NumberData) && y is ReferenceData) {
-            //TODO: xがString or NumberかつyがObjectのとき
+        if((x is StringData || x is NumberData) && y is ObjectData) {
             return abstractEqualityComparison(x, toPrimitive(y))
         }
-        if(x is ReferenceData && (y is ReferenceData || y is NumberData)) {
-            //TODO: yがString or NumberかつxがObjectのとき
+        if(x is ObjectData && (y is StringData || y is NumberData)) {
             return abstractEqualityComparison(toPrimitive(x), y)
         }
         return BooleanData(false)
     }
 
-    private fun strictEqualityComparison(x: StackData, y: StackData): BooleanData {
+    private fun strictEqualityComparison(x: EcmaData, y: EcmaData): BooleanData {
         if(x::class != y::class) return BooleanData(false)
         if(x is UndefinedData) return BooleanData(true)
         if(x is NullData) return BooleanData(true)
@@ -581,14 +399,8 @@ class ToneVirtualMachine {
             return BooleanData(false)
         }
         if(x is BooleanData) return BooleanData(x.value == (y as BooleanData).value)
-        if(x is ReferenceData) return BooleanData(x == y)
+        if(x is StringData) throw NotImplementedError()
+        if(x is ObjectData) throw NotImplementedError()
         return BooleanData(false) //TODO: String, Objectの比較
-    }
-
-    fun type(value: Int): ValueType {
-        return ValueType.Number
-    }
-    enum class ValueType {
-        Number
     }
 }

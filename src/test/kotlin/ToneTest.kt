@@ -11,7 +11,7 @@ class ToneTest {
         parser = Parser()
     }
 
-    private fun run(code: String): ToneVirtualMachine.StackData? {
+    private fun run(code: String): StackData? {
         val tokenizer = Tokenizer(code)
         parser.parse(tokenizer.tokenized)
         val node = parser.parsedNode ?: kotlin.run {
@@ -22,44 +22,49 @@ class ToneTest {
         compiler.byteLines.forEach { op ->
             println("${op.opCode} ${op.operand ?: ""}")
         }
+        compiler.refPoolManager.referencePool.forEachIndexed { index, referenceData ->
+            println("$index: ${referenceData.referencedName}")
+        }
         val vm = ToneVirtualMachine()
-        return vm.run(compiler.byteLines)
+        return vm.run(compiler.byteLines,
+            compiler.refPoolManager.referencePool
+        )
     }
 
     @Test
     fun addMulTest() {
         val result = run("1+2*3")
-        Assert.assertEquals(7, (result as? ToneVirtualMachine.NumberData)?.value)
+        Assert.assertEquals(7, (result as? NumberStackData)?.value)
     }
 
     @Test
     fun calc5Test() {
         val result = run("4/2-3%2*2+1")
-        Assert.assertEquals(1, (result as? ToneVirtualMachine.NumberData)?.value)
+        Assert.assertEquals(1, (result as? NumberStackData)?.value)
     }
 
     @Test
     fun calcBitTest() {
         val result = run("2&3^10>>1<<5+5>>>1")
-        Assert.assertEquals(2562, (result as? ToneVirtualMachine.NumberData)?.value)
+        Assert.assertEquals(2562, (result as? NumberStackData)?.value)
     }
 
     @Test
     fun calcRelationTest() {
         val result = run("(1 > 2) <= (1 < 2)")
-        Assert.assertEquals(true, (result as? ToneVirtualMachine.BooleanData)?.value)
+        Assert.assertEquals(true, (result as? BooleanStackData)?.value)
     }
 
     @Test
     fun calcLogicalTest() {
         val result = run("1==2||null&&1+2")
-        assert(result is ToneVirtualMachine.NullData)
+        assert(result is NullStackData)
     }
 
     @Test
     fun calcConditionalExprTest() {
         val result = run("2?!1:3")
-        Assert.assertEquals(false, (result as? ToneVirtualMachine.BooleanData)?.value)
+        Assert.assertEquals(false, (result as? BooleanStackData)?.value)
     }
 
     @Test
@@ -70,7 +75,7 @@ class ToneTest {
                 3-4;;
             }
         """.trimIndent())
-        Assert.assertEquals(-1, (result as? ToneVirtualMachine.NumberData)?.value)
+        Assert.assertEquals(-1, (result as? NumberStackData)?.value)
     }
     @Test
     fun ifStmtTest() {
@@ -81,6 +86,16 @@ class ToneTest {
                 -1;
             }
         """.trimIndent())
-        Assert.assertEquals(-1, (result as? ToneVirtualMachine.NumberData)?.value)
+        Assert.assertEquals(-1, (result as? NumberStackData)?.value)
+    }
+
+    @Test
+    fun globalVariableTest() {
+        val result = run("""
+            var x;
+            +x;
+        """.trimIndent())
+        println(result)
+        Assert.assertEquals(NumberData.NumberKind.NaN, (result as? NumberStackData)?.kind)
     }
 }
