@@ -18,7 +18,7 @@ class ToneVirtualMachine {
         val mainStack = ArrayDeque<StackData>()
         var counter = 0
         while(counter < code.size) {
-            println("$counter: $mainStack")
+            //println("$counter: $mainStack")
             val operation = code[counter]
             when(operation.opCode) {
                 ByteCompiler.OpCode.Push -> {
@@ -308,9 +308,9 @@ class ToneVirtualMachine {
             is StringStackData -> throw NotImplementedError()
             is ObjectStackData -> throw NotImplementedError()
             is ReferenceStackData -> {
-                println("getValue(ref=$value)")
+                //println("getValue(ref=$value)")
                 val data = referencePool?.get(value.address) ?: throw Exception()
-                println("data=$data")
+                //println("data=$data")
                 val base = data.base
                 if(data.isUnresolvableReference()) throw Exception("ReferenceError")
                 if(data.isPropertyReference()) {

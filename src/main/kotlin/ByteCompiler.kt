@@ -200,9 +200,33 @@ class ByteCompiler {
                 }
             }
             NodeType.AssignmentExpression -> {
-                compile(node.left!!)
-                compile(node.right!!)
-                byteLines.add(ByteOperation(OpCode.Assign, null))
+                if(node.operator == "=") {
+                    compile(node.left!!)
+                    compile(node.right!!)
+                    byteLines.add(ByteOperation(OpCode.Assign, null))
+                }
+                else {
+                    //TODO: leftを2回評価する形になるので問題か？
+                    compile(node.left!!)
+                    compile(node.left)
+                    compile(node.right!!)
+                    val code = when(node.operator) {
+                        "+=" -> OpCode.Add
+                        "-=" -> OpCode.Sub
+                        "*=" -> OpCode.Mul
+                        "/=" -> OpCode.Div
+                        "%=" -> OpCode.Rem
+                        "&=" -> OpCode.And
+                        "|=" -> OpCode.Or
+                        "^=" -> OpCode.Xor
+                        "<<=" -> OpCode.ShiftL
+                        ">>=" -> OpCode.ShiftR
+                        ">>>=" -> OpCode.ShiftUR
+                        else -> throw Exception()
+                    }
+                    byteLines.add(ByteOperation(code, null))
+                    byteLines.add(ByteOperation(OpCode.Assign, null))
+                }
                 //TODO: operators
             }
             NodeType.Literal -> {

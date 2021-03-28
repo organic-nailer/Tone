@@ -100,4 +100,16 @@ class ToneTest {
         println(result)
         Assert.assertEquals(3, (result as? NumberStackData)?.value)
     }
+
+    @Test
+    fun assignmentTest() {
+        val result = run("""
+            var x;
+            x = 2;
+            x *= 2;
+            x + 1
+        """.trimIndent())
+        println(result)
+        Assert.assertEquals(5, (result as? NumberStackData)?.value)
+    }
 }
