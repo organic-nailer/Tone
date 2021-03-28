@@ -5,6 +5,7 @@ class ByteCompiler {
     private val labelTable: MutableMap<String, Int> = mutableMapOf()
     private var uniqueLabelIndex = 0
     private val contextStack = ArrayDeque<ExecutionContext>()
+    private val scopeStack = ArrayDeque<ScopeData>()
     val refPool = mutableListOf<ReferenceData>()
     var globalObject: GlobalObject? = null
 
@@ -16,7 +17,7 @@ class ByteCompiler {
         replaceLabel()
     }
 
-    private fun compile(node: Node) {
+    private fun compile(node: Node, scopeLabel: String? = null, noScope: Boolean = false) {
         when(node.type) {
             NodeType.Program -> {
                 if(node.body.isNullOrEmpty()) {
@@ -30,16 +31,18 @@ class ByteCompiler {
                 )
                 contextStack.addFirst(progCxt)
                 globalObject = progCxt.thisBinding as GlobalObject
+                scopeStack.addFirst(ScopeData(node.type))
                 node.body.forEachIndexed { i, element ->
                     compile(element)
                     if(i != 0) {
                         val label = "L${uniqueLabelIndex++}"
                         byteLines.add(ByteOperation(OpCode.IfEmpty, label))
-                        byteLines.add(ByteOperation(OpCode.Swap, null))
+                        byteLines.add(ByteOperation(OpCode.Swap))
                         labelTable[label] = byteLines.size
-                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                        byteLines.add(ByteOperation(OpCode.Pop))
                     }
                 }
+                scopeStack.removeFirst()
                 contextStack.removeFirst()
                 return
             }
@@ -47,44 +50,52 @@ class ByteCompiler {
             NodeType.ExpressionStatement -> {
                 node.expression?.let {
                     compile(it)
-                    byteLines.add(ByteOperation(OpCode.GetValue, null))
+                    byteLines.add(ByteOperation(OpCode.GetValue))
                 }
                 return
             }
             NodeType.BlockStatement -> {
+                val labelBreak = "L${uniqueLabelIndex++}"
+                if(!noScope) {
+                    scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak = labelBreak))
+                }
                 if(node.body.isNullOrEmpty()) {
                     byteLines.add(ByteOperation(OpCode.Push, "empty"))
                 }
                 else {
                     //Stackには最新の結果のみを残すようにする
                     //ただしemptyの場合は前の結果を残す
-                    node.body.forEachIndexed { i, element ->
+                    byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                    node.body.forEach { element ->
                         compile(element)
-                        if(i != 0) {
-                            val label = "L${uniqueLabelIndex++}"
-                            byteLines.add(ByteOperation(OpCode.IfEmpty, label))
-                            byteLines.add(ByteOperation(OpCode.Swap, null))
-                            labelTable[label] = byteLines.size
-                            byteLines.add(ByteOperation(OpCode.Pop, null))
-                        }
+                        val label = "L${uniqueLabelIndex++}"
+                        byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                        byteLines.add(ByteOperation(OpCode.Swap))
+                        labelTable[label] = byteLines.size
+                        byteLines.add(ByteOperation(OpCode.Pop))
                     }
                 }
-                return
+                if(!noScope) {
+                    labelTable[labelBreak] = byteLines.size
+                    scopeStack.removeFirst()
+                }
             }
             NodeType.EmptyStatement -> {
                 byteLines.add(ByteOperation(OpCode.Push, "empty"))
             }
             NodeType.IfStatement -> {
+                val labelBreak = "L${uniqueLabelIndex++}"
+                scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak = labelBreak))
                 if(node.alternate == null) { //elseなし
                     node.test?.let { compile(it) }
                     val label = "L${uniqueLabelIndex++}"
                     byteLines.add(ByteOperation(OpCode.IfFalse, label))
-                    byteLines.add(ByteOperation(OpCode.Pop, null))
-                    node.consequent?.let { compile(it) }
+                    byteLines.add(ByteOperation(OpCode.Pop))
+                    node.consequent?.let { compile(it, noScope = true) }
                     val label2 = "L${uniqueLabelIndex++}"
                     byteLines.add(ByteOperation(OpCode.Goto, label2))
                     labelTable[label] = byteLines.size
-                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    byteLines.add(ByteOperation(OpCode.Pop))
                     byteLines.add(ByteOperation(OpCode.Push, "empty"))
                     labelTable[label2] = byteLines.size
                 }
@@ -92,62 +103,79 @@ class ByteCompiler {
                     node.test?.let { compile(it) }
                     val label = "L${uniqueLabelIndex++}"
                     byteLines.add(ByteOperation(OpCode.IfFalse, label))
-                    byteLines.add(ByteOperation(OpCode.Pop, null))
-                    node.consequent?.let { compile(it) }
+                    byteLines.add(ByteOperation(OpCode.Pop))
+                    node.consequent?.let { compile(it, noScope = true) }
                     val label2 = "L${uniqueLabelIndex++}"
                     byteLines.add(ByteOperation(OpCode.Goto, label2))
                     labelTable[label] = byteLines.size
-                    byteLines.add(ByteOperation(OpCode.Pop, null))
-                    compile(node.alternate)
+                    byteLines.add(ByteOperation(OpCode.Pop))
+                    compile(node.alternate, noScope = true)
                     labelTable[label2] = byteLines.size
                 }
+                labelTable[labelBreak] = byteLines.size
+                scopeStack.removeFirst()
             }
             NodeType.DoWhileStatement -> {
-                //TODO: continue, break
+                val labelBreak = "L${uniqueLabelIndex++}"
+                val labelContinue = "L${uniqueLabelIndex++}"
+                scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak, labelContinue))
+
                 byteLines.add(ByteOperation(OpCode.Push, "empty"))
                 byteLines.add(ByteOperation(OpCode.Push, "empty"))
                 val labelStart = "L${uniqueLabelIndex++}"
                 labelTable[labelStart] = byteLines.size
-                byteLines.add(ByteOperation(OpCode.Pop, null))
-                compile(node.bodySingle!!)
+                byteLines.add(ByteOperation(OpCode.Pop))
+                compile(node.bodySingle!!, noScope = true)
                 val label = "L${uniqueLabelIndex++}"
                 byteLines.add(ByteOperation(OpCode.IfEmpty, label))
-                byteLines.add(ByteOperation(OpCode.Swap, null))
+                byteLines.add(ByteOperation(OpCode.Swap))
                 labelTable[label] = byteLines.size
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Pop))
+                labelTable[labelContinue] = byteLines.size
                 compile(node.test!!)
                 byteLines.add(ByteOperation(OpCode.IfTrue, labelStart))
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                labelTable[labelBreak] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop))
+                scopeStack.removeFirst()
             }
             NodeType.WhileStatement -> {
-                //TODO: continue, break
+                val labelBreak = "L${uniqueLabelIndex++}"
+                val labelContinue = "L${uniqueLabelIndex++}"
+                scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak, labelContinue))
+
                 byteLines.add(ByteOperation(OpCode.Push, "empty"))
                 val labelStart = "L${uniqueLabelIndex++}"
                 labelTable[labelStart] = byteLines.size
                 compile(node.test!!)
                 val labelEnd = "L${uniqueLabelIndex++}"
                 byteLines.add(ByteOperation(OpCode.IfFalse, labelEnd))
-                byteLines.add(ByteOperation(OpCode.Pop, null))
-                compile(node.bodySingle!!)
+                byteLines.add(ByteOperation(OpCode.Pop))
+                compile(node.bodySingle!!, noScope = true)
                 val label = "L${uniqueLabelIndex++}"
                 byteLines.add(ByteOperation(OpCode.IfEmpty, label))
-                byteLines.add(ByteOperation(OpCode.Swap, null))
+                byteLines.add(ByteOperation(OpCode.Swap))
                 labelTable[label] = byteLines.size
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Pop))
+                labelTable[labelContinue] = byteLines.size
                 byteLines.add(ByteOperation(OpCode.Goto, labelStart))
                 labelTable[labelEnd] = byteLines.size
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                labelTable[labelBreak] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop))
+                scopeStack.removeFirst()
             }
             NodeType.ForStatement -> {
-                //TODO: continue, break
+                val labelBreak = "L${uniqueLabelIndex++}"
+                val labelContinue = "L${uniqueLabelIndex++}"
+                scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak, labelContinue))
+
                 if(node.init?.type == NodeType.VariableDeclaration) {
                     compile(node.init)
                 }
                 else {
                     node.init?.let { compile(it) }
-                    byteLines.add(ByteOperation(OpCode.GetValue, null))
+                    byteLines.add(ByteOperation(OpCode.GetValue))
                 }
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Pop))
                 byteLines.add(ByteOperation(OpCode.Push, "empty"))
                 val labelStart = "L${uniqueLabelIndex++}"
                 labelTable[labelStart] = byteLines.size
@@ -155,35 +183,129 @@ class ByteCompiler {
                 node.test?.let {
                     compile(it)
                     byteLines.add(ByteOperation(OpCode.IfFalse, labelEnd))
-                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    byteLines.add(ByteOperation(OpCode.Pop))
                 }
-                compile(node.bodySingle!!)
+                compile(node.bodySingle!!, noScope = true)
                 val label = "L${uniqueLabelIndex++}"
                 byteLines.add(ByteOperation(OpCode.IfEmpty, label))
-                byteLines.add(ByteOperation(OpCode.Swap, null))
+                byteLines.add(ByteOperation(OpCode.Swap))
                 labelTable[label] = byteLines.size
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Pop))
+                labelTable[labelContinue] = byteLines.size
 
                 node.update?.let {
                     compile(it)
-                    byteLines.add(ByteOperation(OpCode.GetValue, null))
-                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    byteLines.add(ByteOperation(OpCode.GetValue))
+                    byteLines.add(ByteOperation(OpCode.Pop))
                 }
 
                 byteLines.add(ByteOperation(OpCode.Goto, labelStart))
                 labelTable[labelEnd] = byteLines.size
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                labelTable[labelBreak] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop))
+
+                scopeStack.removeFirst()
             }
             NodeType.ForInStatement -> {
+                //TODO: break, continue
+                scopeStack.addFirst(ScopeData(node.type))
+                scopeStack.removeFirst()
                 throw NotImplementedError()
+            }
+            NodeType.BreakStatement -> {
+                if(node.label != null) {
+                    val label = node.label.name!!
+                    val scopeIndex = scopeStack.indexOfFirst {
+                        it.label == label
+                            || it.type == NodeType.FunctionDeclaration
+                            || it.type == NodeType.FunctionExpression
+                    } ?: throw Exception("SyntaxError")
+                    if(scopeIndex < 0) throw Exception("SyntaxError")
+                    val scope = scopeStack[scopeIndex]
+                    if(scope.type == NodeType.FunctionExpression
+                        || scope.type == NodeType.FunctionDeclaration) throw Exception("SyntaxError")
+                    for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) { //scopeがネストしている分だけPopする
+                        byteLines.add(ByteOperation(OpCode.Pop))
+                    }
+                    byteLines.add(ByteOperation(OpCode.Goto, scope.labelBreak!!))
+                }
+                else {
+                    val scopeIndex = scopeStack.indexOfFirst {
+                        it.type == NodeType.DoWhileStatement
+                            || it.type == NodeType.WhileStatement
+                            || it.type == NodeType.ForStatement
+                            || it.type == NodeType.ForInStatement
+                            || it.type == NodeType.SwitchStatement
+                            || it.type == NodeType.FunctionDeclaration
+                            || it.type == NodeType.FunctionExpression
+                    }
+                    if(scopeIndex < 0) throw Exception("SyntaxError")
+                    val scope = scopeStack[scopeIndex]
+                    if(scope.type == NodeType.FunctionExpression
+                        || scope.type == NodeType.FunctionDeclaration) throw Exception("SyntaxError")
+                    for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) {
+                        byteLines.add(ByteOperation(OpCode.Pop))
+                    }
+                    byteLines.add(ByteOperation(OpCode.Goto, scope.labelBreak!!))
+                }
+            }
+            NodeType.ContinueStatement -> {
+                if(node.label != null) {
+                    val label = node.label.name!!
+                    val scopeIndex = scopeStack.indexOfFirst {
+                        it.label == label
+                            || it.type == NodeType.FunctionDeclaration
+                            || it.type == NodeType.FunctionExpression
+                    }
+                    if(scopeIndex < 0) throw Exception("SyntaxError")
+                    val scope = scopeStack[scopeIndex]
+                    if(scope.type != NodeType.DoWhileStatement
+                        && scope.type != NodeType.WhileStatement
+                        && scope.type != NodeType.ForStatement
+                        && scope.type != NodeType.ForInStatement) throw Exception("SyntaxError")
+                    for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) {
+                        byteLines.add(ByteOperation(OpCode.Pop))
+                    }
+                    byteLines.add(ByteOperation(OpCode.Goto, scope.labelContinue!!))
+                }
+                else {
+                    val scopeIndex = scopeStack.indexOfFirst {
+                        it.type == NodeType.DoWhileStatement
+                            || it.type == NodeType.WhileStatement
+                            || it.type == NodeType.ForStatement
+                            || it.type == NodeType.ForInStatement
+                            || it.type == NodeType.FunctionDeclaration
+                            || it.type == NodeType.FunctionExpression
+                    }
+                    if(scopeIndex < 0) throw Exception("SyntaxError")
+                    val scope = scopeStack[scopeIndex]
+                    if(scope.type == NodeType.FunctionExpression
+                        || scope.type == NodeType.FunctionDeclaration) throw Exception("SyntaxError")
+                    for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) {
+                        byteLines.add(ByteOperation(OpCode.Pop))
+                    }
+                    byteLines.add(ByteOperation(OpCode.Goto, scope.labelContinue!!))
+                }
+            }
+            NodeType.LabeledStatement -> {
+                if(scopeLabel != null) {
+                    val labelBreak = "L${uniqueLabelIndex++}"
+                    scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak = labelBreak))
+                    compile(node)
+                    labelTable[labelBreak] = byteLines.size
+                    scopeStack.removeFirst()
+                }
+                else {
+                    compile(node.bodySingle!!, node.label!!.name)
+                }
             }
             NodeType.VariableDeclaration -> {
                 node.declarations!!.forEach { declaration ->
                     if(declaration.init != null) {
                         compile(declaration.id!!)
                         compile(declaration.init)
-                        byteLines.add(ByteOperation(OpCode.Assign, null))
-                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                        byteLines.add(ByteOperation(OpCode.Assign))
+                        byteLines.add(ByteOperation(OpCode.Pop))
                     }
                 }
                 byteLines.add(ByteOperation(OpCode.Push, "empty"))
@@ -217,7 +339,7 @@ class ByteCompiler {
                         throw NotImplementedError()
                     }
                 }
-                byteLines.add(ByteOperation(code, null))
+                byteLines.add(ByteOperation(code))
                 return
             }
             NodeType.LogicalExpression -> {
@@ -226,7 +348,7 @@ class ByteCompiler {
                         node.left?.let { compile(it) }
                         val label = "L${uniqueLabelIndex++}"
                         byteLines.add(ByteOperation(OpCode.IfFalse, label))
-                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                        byteLines.add(ByteOperation(OpCode.Pop))
                         node.right?.let { compile(it) }
                         labelTable[label] = byteLines.size
                     }
@@ -234,7 +356,7 @@ class ByteCompiler {
                         node.left?.let { compile(it) }
                         val label = "L${uniqueLabelIndex++}"
                         byteLines.add(ByteOperation(OpCode.IfTrue, label))
-                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                        byteLines.add(ByteOperation(OpCode.Pop))
                         node.right?.let { compile(it) }
                         labelTable[label] = byteLines.size
                     }
@@ -244,8 +366,8 @@ class ByteCompiler {
             NodeType.UnaryExpression -> {
                 node.argument?.let { compile(it) }
                 if(node.operator == "void") {
-                    byteLines.add(ByteOperation(OpCode.GetValue, null))
-                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                    byteLines.add(ByteOperation(OpCode.GetValue))
+                    byteLines.add(ByteOperation(OpCode.Pop))
                     byteLines.add(ByteOperation(OpCode.Push, "undefined"))
                     return
                 }
@@ -258,27 +380,27 @@ class ByteCompiler {
                     "!" -> OpCode.LogicalNot
                     else -> throw Exception()
                 }
-                byteLines.add(ByteOperation(code, null))
+                byteLines.add(ByteOperation(code))
             }
             NodeType.ConditionalExpression -> {
                 node.test?.let { compile(it) }
                 val label = "L${uniqueLabelIndex++}"
                 byteLines.add(ByteOperation(OpCode.IfFalse, label))
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Pop))
                 node.consequent?.let { compile(it) }
                 val label2 = "L${uniqueLabelIndex++}"
                 byteLines.add(ByteOperation(OpCode.Goto, label2))
                 labelTable[label] = byteLines.size
-                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Pop))
                 node.alternate?.let { compile(it) }
                 labelTable[label2] = byteLines.size
             }
             NodeType.SequenceExpression -> {
                 node.expressions?.forEachIndexed { i, expr ->
                     compile(expr)
-                    byteLines.add(ByteOperation(OpCode.GetValue, null))
+                    byteLines.add(ByteOperation(OpCode.GetValue))
                     if(i+1 != node.expressions.size) {
-                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                        byteLines.add(ByteOperation(OpCode.Pop))
                     }
                 }
             }
@@ -286,7 +408,7 @@ class ByteCompiler {
                 if(node.operator == "=") {
                     compile(node.left!!)
                     compile(node.right!!)
-                    byteLines.add(ByteOperation(OpCode.Assign, null))
+                    byteLines.add(ByteOperation(OpCode.Assign))
                 }
                 else {
                     //TODO: leftを2回評価する形になるので問題か？
@@ -307,8 +429,8 @@ class ByteCompiler {
                         ">>>=" -> OpCode.ShiftUR
                         else -> throw Exception()
                     }
-                    byteLines.add(ByteOperation(code, null))
-                    byteLines.add(ByteOperation(OpCode.Assign, null))
+                    byteLines.add(ByteOperation(code))
+                    byteLines.add(ByteOperation(OpCode.Assign))
                 }
             }
             NodeType.Literal -> {
@@ -338,6 +460,10 @@ class ByteCompiler {
     }
 
     private fun replaceLabel() {
+        println("labels")
+        labelTable.forEach { (t, u) ->
+            println("$t -> $u")
+        }
         for(i in byteLines.indices) {
             val operand = byteLines[i].operand ?: continue
             labelTable[operand]?.let {
@@ -348,8 +474,13 @@ class ByteCompiler {
 
     data class ByteOperation(
         val opCode: OpCode,
-        val operand: String?
-    )
+        val operand: String? = null
+    ) {
+        override fun toString(): String {
+            if(operand == null) return opCode.name
+            return "$opCode $operand"
+        }
+    }
     enum class OpCode {
         Push, Pop, Add, Sub, Mul, Div, Rem,
         ShiftL, ShiftR, ShiftUR, And, Or, Xor,
@@ -358,4 +489,11 @@ class ByteCompiler {
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
         GetValue, IfEmpty, Swap, Assign
     }
+
+    data class ScopeData(
+        val type: NodeType,
+        val label: String? = null,
+        val labelBreak: String? = null,
+        val labelContinue: String? = null
+    )
 }

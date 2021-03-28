@@ -20,6 +20,7 @@ class ToneVirtualMachine {
         while(counter < code.size) {
             println("$counter: $mainStack")
             val operation = code[counter]
+            println("op=$operation")
             when(operation.opCode) {
                 ByteCompiler.OpCode.Push -> {
                     mainStack.addFirst(operandToData(operation.operand))

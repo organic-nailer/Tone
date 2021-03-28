@@ -341,14 +341,16 @@ class Parser {
                 }
                 Block.ordinal -> {
                     val bodyElements = mutableListOf<Node>()
-                    var node = children[1]
-                    while(true) {
-                        if(node.children.size == 1) {
+                    if(children[1].children.isNotEmpty()) {
+                        var node = children[1]
+                        while(true) {
+                            if(node.children.size == 1) {
+                                bodyElements.add(0,node.children[0].toNode())
+                                break
+                            }
                             bodyElements.add(0,node.children[0].toNode())
-                            break
+                            node = node.children[1]
                         }
-                        bodyElements.add(0,node.children[0].toNode())
-                        node = node.children[1]
                     }
                     Node(
                         type = NodeType.BlockStatement,
