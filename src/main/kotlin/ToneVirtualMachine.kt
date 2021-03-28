@@ -1,20 +1,24 @@
 import TypeConverter.toBoolean
 import TypeConverter.toInt32
 import TypeConverter.toNumber
+import TypeConverter.toObject
 import TypeConverter.toPrimitive
 import TypeConverter.toUInt32
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 class ToneVirtualMachine {
     var referencePool: List<ReferenceData?>? = null
+    var globalObjectData: GlobalObject? = null
     fun run(
         code: List<ByteCompiler.ByteOperation>,
-        refPool: List<ReferenceData?>
+        refPool: List<ReferenceData?>,
+        global: GlobalObject
     ): StackData? {
         referencePool = refPool
+        globalObjectData = global
         val mainStack = ArrayDeque<StackData>()
         var counter = 0
         while(counter < code.size) {
+            println("$counter: $mainStack")
             val operation = code[counter]
             when(operation.opCode) {
                 ByteCompiler.OpCode.Push -> {
@@ -22,7 +26,6 @@ class ToneVirtualMachine {
                 }
                 ByteCompiler.OpCode.Pop -> {
                     mainStack.removeFirst()
-
                 }
                 ByteCompiler.OpCode.Mul,
                 ByteCompiler.OpCode.Div,
@@ -243,6 +246,22 @@ class ToneVirtualMachine {
                     mainStack.addFirst(first)
                     mainStack.addFirst(second)
                 }
+                ByteCompiler.OpCode.Assign -> {
+                    val rRef = mainStack.removeFirst()
+                    val lRef = mainStack.removeFirst()
+                    val rVal = getValue(rRef)
+                    if(lRef is ReferenceStackData) {
+                        val lData = referencePool?.get(lRef.address)
+                        if(lData?.strict == true) {
+                            if((lData.base is EnvironmentRecords)
+                                && (lData.referencedName == "eval" || lData.referencedName == "arguments")) {
+                                throw Exception("SyntaxError")
+                            }
+                        }
+                    }
+                    putValue(lRef, rVal)
+                    mainStack.addFirst(rVal.toStack())
+                }
             }
             counter++
         }
@@ -281,26 +300,94 @@ class ToneVirtualMachine {
     }
 
     private fun getValue(value: StackData): EcmaData {
-        return when(value) {
-            is NumberStackData -> NumberData(value.kind,value.value)
-            is NullStackData -> NullData()
-            is UndefinedStackData -> UndefinedData()
-            is BooleanStackData -> BooleanData(value.value)
+        when(value) {
+            is NumberStackData -> return NumberData(value.kind,value.value)
+            is NullStackData -> return NullData()
+            is UndefinedStackData -> return UndefinedData()
+            is BooleanStackData -> return BooleanData(value.value)
             is StringStackData -> throw NotImplementedError()
             is ObjectStackData -> throw NotImplementedError()
             is ReferenceStackData -> {
+                println("getValue(ref=$value)")
                 val data = referencePool?.get(value.address) ?: throw Exception()
+                println("data=$data")
+                val base = data.base
                 if(data.isUnresolvableReference()) throw Exception("ReferenceError")
                 if(data.isPropertyReference()) {
-                    //TODO: 読んでもよくわからんかった
-                    data.base as EcmaData
+                    if(!data.hasPrimitiveBase()) {
+                        return (base as ObjectData).get(data.referencedName) ?: UndefinedData()
+                    }
+                    else {
+                        val o = toObject(base as EcmaData)
+                        val desc = o.getProperty(data.referencedName)
+                        if(desc == null) return UndefinedData()
+                        else if(desc.type == ObjectData.PropertyDescriptor.DescriptorType.Data) {
+                            return desc.value!!
+                        }
+                        else {
+                            val getter = desc.get ?: return UndefinedData()
+                            //TODO: getter.[[Call]](this=base)
+                            throw NotImplementedError()
+                        }
+                    }
                 }
                 else {
-                    data.base as EcmaData
+                    base as EnvironmentRecords
+                    return base.getBindingValue(data.referencedName, data.strict)
                 }
             }
             else -> throw Exception()
         }
+    }
+
+    //TODO: ???????????????????
+    fun putValue(left: StackData, right: EcmaData) {
+        if(left !is ReferenceStackData) throw Exception("ReferenceError")
+        val value = referencePool?.get(left.address) ?: throw Exception()
+        val base = value.base
+        if(value.isUnresolvableReference()) {
+            if(value.strict) throw Exception("ReferenceError")
+            globalObjectData!!.put(
+                value.referencedName, right, false
+            )
+        }
+        else if(value.isPropertyReference()) {
+            if(!value.hasPrimitiveBase()) {
+                (base as ObjectData).put(
+                    value.referencedName, right, value.strict
+                )
+            }
+            else {
+                //special put method
+                val o = toObject(base as EcmaData)
+                if(!o.canPut(value.referencedName)) {
+                    if(value.strict) throw Exception("TypeError")
+                    return
+                }
+                val ownDesc = o.getOwnProperty(value.referencedName)
+                if(ownDesc?.type == ObjectData.PropertyDescriptor.DescriptorType.Data) {
+                    //Primitive型のプロパティを変更するのはあれだから？
+                    if(value.strict) throw Exception("TypeError")
+                    return
+                }
+                val desc = o.getProperty(value.referencedName)
+                if(desc?.type == ObjectData.PropertyDescriptor.DescriptorType.Accessor) {
+                    val setter = desc.set!!
+                    //TODO: setter.[[Call]](this=base, right)
+                    throw NotImplementedError()
+                }
+                else {
+                    if(value.strict) throw Exception("TypeError")
+                    return
+                }
+            }
+        }
+        else {
+            (base as EnvironmentRecords).setMutableBinding(
+                value.referencedName, right, value.strict
+            )
+        }
+        return
     }
 
     //smallExpected < bigExpectedを評価する

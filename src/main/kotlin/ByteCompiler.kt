@@ -5,8 +5,8 @@ class ByteCompiler {
     private val labelTable: MutableMap<String, Int> = mutableMapOf()
     private var uniqueLabelIndex = 0
     private val contextStack = ArrayDeque<ExecutionContext>()
-    val refPoolManager = RefPoolManager()
-
+    val refPool = mutableListOf<ReferenceData>()
+    var globalObject: GlobalObject? = null
 
     fun run(node: Node) {
         byteLines.clear()
@@ -23,12 +23,13 @@ class ByteCompiler {
                     byteLines.add(ByteOperation(OpCode.Push, "empty"))
                     return
                 }
-                val progCxt = ExecutionContext.global(refPoolManager)
+                val progCxt = ExecutionContext.global()
                 declarationBindingInstantiation(
                     progCxt.variableEnvironment, node.body,
                     ContextMode.Global, false //TODO: Strict
                 )
                 contextStack.addFirst(progCxt)
+                globalObject = progCxt.thisBinding as GlobalObject
                 node.body.forEachIndexed { i, element ->
                     compile(element)
                     if(i != 0) {
@@ -198,6 +199,12 @@ class ByteCompiler {
                     }
                 }
             }
+            NodeType.AssignmentExpression -> {
+                compile(node.left!!)
+                compile(node.right!!)
+                byteLines.add(ByteOperation(OpCode.Assign, null))
+                //TODO: operators
+            }
             NodeType.Literal -> {
                 if(node.raw == "null"
                     || node.raw == "true"
@@ -215,12 +222,8 @@ class ByteCompiler {
                 val identifier = node.name!!
                 val resolved = contextStack.first()
                     .resolveIdentifier(identifier, false) //TODO: strict
-                val desc = (resolved.base as? EnvironmentRecords)?.getBindingValue(resolved.referencedName, false)
-                desc?.address?.let {
-                    byteLines.add(ByteOperation(OpCode.Push, "#$it"))
-                } ?: kotlin.run {
-                    byteLines.add(ByteOperation(OpCode.Push, "undefined"))
-                }
+                refPool.add(resolved)
+                byteLines.add(ByteOperation(OpCode.Push, "#${refPool.size-1}"))
             }
             else -> {
                 throw NotImplementedError("${node.type} is Not Implemented")
@@ -247,24 +250,6 @@ class ByteCompiler {
         GT, GTE, LT, LTE, InstanceOf, In,
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
-        GetValue, IfEmpty, Swap
-    }
-
-    class RefPoolManager() {
-        val referencePool = mutableListOf<ReferenceData>()
-
-        fun setReference(descriptor: ObjectData.PropertyDescriptor, name: String, strict: Boolean): ObjectData.PropertyDescriptor {
-            referencePool.add(ReferenceData(
-                descriptor.value, name, strict
-            ))
-            return descriptor.copy(address = referencePool.size -1)
-        }
-
-        fun reassign(address: Int, descriptor: ObjectData.PropertyDescriptor, name: String, strict: Boolean): ObjectData.PropertyDescriptor {
-            referencePool[address] = ReferenceData(
-                descriptor.value, name, strict
-            )
-            return descriptor.copy(address = address)
-        }
+        GetValue, IfEmpty, Swap, Assign
     }
 }

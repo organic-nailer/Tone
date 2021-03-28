@@ -13,7 +13,7 @@ fun main(args: Array<String>) {
     val compiler = ByteCompiler()
     compiler.run(node)
     val vm = ToneVirtualMachine()
-    val result = vm.run(compiler.byteLines, compiler.refPoolManager.referencePool)
+    val result = vm.run(compiler.byteLines, compiler.refPool, compiler.globalObject!!)
     println("result:")
     println("${args.first()} => $result")
     return

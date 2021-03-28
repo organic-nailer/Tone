@@ -6,8 +6,8 @@ class ExecutionContext(
     val thisBinding: ObjectData
 ) {
     companion object {
-        fun global(refPoolManager: ByteCompiler.RefPoolManager): ExecutionContext {
-            val globalObj = GlobalObject(refPoolManager)
+        fun global(): ExecutionContext {
+            val globalObj = GlobalObject()
             val globalEnvironment = newObjectEnvironment(globalObj, null)
             return ExecutionContext(
                 globalEnvironment,
@@ -40,7 +40,7 @@ abstract class EnvironmentRecords {
     abstract fun hasBinding(identifier: String): Boolean
     abstract fun createMutableBinding(identifier: String, deletable: Boolean)
     abstract fun setMutableBinding(identifier: String, value: EcmaData, strict: Boolean)
-    abstract fun getBindingValue(identifier: String, strict: Boolean): ObjectData.PropertyDescriptor
+    abstract fun getBindingValue(identifier: String, strict: Boolean): EcmaData
     abstract fun deleteBinding(identifier: String): Boolean
     abstract fun implicitThisValue(): EcmaData
 }
@@ -72,12 +72,12 @@ class DeclarativeEnvironmentRecords : EnvironmentRecords() {
         }
     }
 
-    override fun getBindingValue(identifier: String, strict: Boolean): ObjectData.PropertyDescriptor {
+    override fun getBindingValue(identifier: String, strict: Boolean): EcmaData {
         assert(records.containsKey(identifier))
         val current = records[identifier]!!
         if(!current.mutable && current.value == null) {
             if(strict) throw Exception("ReferenceError") //TODO: ReferenceError
-            return ObjectData.PropertyDescriptor.innocent(UndefinedData())
+            return UndefinedData()
         }
         throw NotImplementedException()
         //return current!!
@@ -130,10 +130,10 @@ class ObjectEnvironmentRecords(
         bindings.put(identifier, value, strict)
     }
 
-    override fun getBindingValue(identifier: String, strict: Boolean): ObjectData.PropertyDescriptor {
+    override fun getBindingValue(identifier: String, strict: Boolean): EcmaData {
         val value = bindings.hasProperty(identifier)
         if(!value) {
-            if(strict) return ObjectData.PropertyDescriptor.innocent(UndefinedData())
+            if(strict) return UndefinedData()
             throw Exception("ReferenceError") //TODO: ReferenceError
         }
         return bindings.get(identifier)!!

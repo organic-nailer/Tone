@@ -22,12 +22,13 @@ class ToneTest {
         compiler.byteLines.forEach { op ->
             println("${op.opCode} ${op.operand ?: ""}")
         }
-        compiler.refPoolManager.referencePool.forEachIndexed { index, referenceData ->
+        compiler.refPool.forEachIndexed { index, referenceData ->
             println("$index: ${referenceData.referencedName}")
         }
         val vm = ToneVirtualMachine()
         return vm.run(compiler.byteLines,
-            compiler.refPoolManager.referencePool
+            compiler.refPool,
+            compiler.globalObject!!
         )
     }
 
@@ -93,9 +94,10 @@ class ToneTest {
     fun globalVariableTest() {
         val result = run("""
             var x;
-            +x;
+            x = 2;
+            x + 1;
         """.trimIndent())
         println(result)
-        Assert.assertEquals(NumberData.NumberKind.NaN, (result as? NumberStackData)?.kind)
+        Assert.assertEquals(3, (result as? NumberStackData)?.value)
     }
 }

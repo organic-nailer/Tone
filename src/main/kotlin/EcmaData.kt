@@ -166,18 +166,16 @@ data class StringData(
     val value: String
 ): EcmaData()
 
-open class ObjectData(
-    private val refPoolManager: ByteCompiler.RefPoolManager
-): EcmaData() {
+open class ObjectData: EcmaData() {
     protected val namedProperties
         : MutableMap<String, PropertyDescriptor> = mutableMapOf()
 
     open val prototype: ObjectData? = null
     open val className: String = ""
     open val extensible: Boolean = true
-    fun get(propertyName: String): PropertyDescriptor? {
+    fun get(propertyName: String): EcmaData? {
         val desc = getProperty(propertyName) ?: return null
-        if(desc.type == PropertyDescriptor.DescriptorType.Data) return desc
+        if(desc.type == PropertyDescriptor.DescriptorType.Data) return desc.value
         val getter = desc.get ?: return null
         //return getter.[[Call]](this)
         throw NotImplementedError()
@@ -205,7 +203,7 @@ open class ObjectData(
         }
         val ownDesc = getOwnProperty(propertyName)
         if(ownDesc?.type == PropertyDescriptor.DescriptorType.Data) {
-            val valueDesc = PropertyDescriptor.data(value = ownDesc.value!!, address = ownDesc.address!!)
+            val valueDesc = PropertyDescriptor.data(value = value, address = ownDesc.address!!)
             defineOwnProperty(propertyName, valueDesc, throwFlag)
             return
         }
@@ -254,13 +252,13 @@ open class ObjectData(
     }
     fun defaultValue(hint: String) /*: Primitive */ {
         val toString = get("toString")
-        if(isCallable(toString?.value ?: UndefinedData())) {
+        if(isCallable(toString ?: UndefinedData())) {
             //val str = toString.[[Call]]()
             //if(str is Primitive) return str
             throw NotImplementedException()
         }
         val valueOf = get("valueOf")
-        if(isCallable(valueOf?.value ?: UndefinedData())) {
+        if(isCallable(valueOf ?: UndefinedData())) {
             //val value = valueOf.[[Call]]()
             //if(value is Primitive) return value
             throw NotImplementedException()
@@ -269,13 +267,13 @@ open class ObjectData(
     }
     fun defaultValue(hint: Int) /*: Primitive */ {
         val valueOf = get("valueOf")
-        if(isCallable(valueOf?.value ?: UndefinedData())) {
+        if(isCallable(valueOf ?: UndefinedData())) {
             //val value = valueOf.[[Call]]()
             //if(value is Primitive) return value
             throw NotImplementedException()
         }
         val toString = get("toString")
-        if(isCallable(toString?.value ?: UndefinedData())) {
+        if(isCallable(toString ?: UndefinedData())) {
             //val str = toString.[[Call]]()
             //if(str is Primitive) return str
             throw NotImplementedException()
@@ -291,10 +289,10 @@ open class ObjectData(
         if(current == null && extensible) {
             if(descriptor.type == PropertyDescriptor.DescriptorType.Data
                 || descriptor.type == PropertyDescriptor.DescriptorType.Generic) {
-                namedProperties[propertyName] = refPoolManager.setReference(descriptor, propertyName, throwFlag)
+                namedProperties[propertyName] = descriptor
             }
             else {
-                namedProperties[propertyName] = refPoolManager.setReference(descriptor, propertyName, throwFlag)
+                namedProperties[propertyName] = descriptor
             }
             return true
         }
@@ -318,19 +316,19 @@ open class ObjectData(
                 return false
             }
             if(current.type == PropertyDescriptor.DescriptorType.Data) {
-                namedProperties[propertyName] = refPoolManager.reassign(current.address!!, PropertyDescriptor.accessor(
+                namedProperties[propertyName] = PropertyDescriptor.accessor(
                     address = 0,
                     configurable = current.configurable!!,
                     enumerable = current.enumerable!!
-                ), propertyName, throwFlag) //TODO: これdescriptor反映させなくていいの？
+                ) //TODO: これdescriptor反映させなくていいの？
             }
             else {
-                namedProperties[propertyName] = refPoolManager.reassign(current.address!!, PropertyDescriptor.data(
+                namedProperties[propertyName] = PropertyDescriptor.data(
                     descriptor.value!!,
                     address = 0,
                     configurable = current.configurable!!,
                     enumerable = current.enumerable!!
-                ), propertyName, throwFlag) //TODO: これdescriptor反映させなくていいの？
+                ) //TODO: これdescriptor反映させなくていいの？
             }
         }
         else if(current.type == PropertyDescriptor.DescriptorType.Data
@@ -360,8 +358,8 @@ open class ObjectData(
                 }
             }
         }
-        namedProperties[propertyName] = refPoolManager.reassign(current!!.address!!, PropertyDescriptor(
-            type = current.type,
+        namedProperties[propertyName] = PropertyDescriptor(
+            type = current!!.type,
             address = 0,
             value = descriptor.value ?: current.value,
             writable = descriptor.writable ?: current.writable,
@@ -369,7 +367,7 @@ open class ObjectData(
             set = descriptor.set ?: current.set,
             enumerable = descriptor.enumerable ?: current.enumerable,
             configurable = descriptor.configurable ?: current.configurable
-        ), propertyName, throwFlag)
+        )
         return true
     }
 
@@ -410,18 +408,12 @@ open class ObjectData(
         }
 
         companion object {
-            fun innocent(ecmaData: EcmaData) = PropertyDescriptor(
-                type = DescriptorType.Generic,
-                address = null,
-                value = ecmaData
-            )
-
             fun data(
                 value: EcmaData,
                 address: Int,
-                writable: Boolean = false,
-                enumerable: Boolean = false,
-                configurable: Boolean = false
+                writable: Boolean? = null,
+                enumerable: Boolean? = null,
+                configurable: Boolean? = null
             ) = PropertyDescriptor(
                 type = DescriptorType.Data,
                 address,
@@ -434,8 +426,8 @@ open class ObjectData(
                 address: Int,
                 get: ObjectData? = null,
                 set: ObjectData? = null,
-                enumerable: Boolean = false,
-                configurable: Boolean = false
+                enumerable: Boolean? = null,
+                configurable: Boolean? = null
             ) = PropertyDescriptor(
                 type = DescriptorType.Accessor,
                 address = address,

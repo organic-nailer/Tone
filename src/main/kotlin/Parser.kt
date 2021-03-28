@@ -27,7 +27,7 @@ class Parser {
     }
 
     private fun parseInternal(input: List<Tokenizer.TokenData>): NodeInternal? {
-        println("input: ${input.joinToString("")}")
+        //println("input: ${input.joinToString("")}")
         val inputMut = input.toMutableList()
         val stack = ArrayDeque<Pair<String,Int>>()// state,token
         val nodeStack = ArrayDeque<NodeInternal>()
@@ -37,7 +37,7 @@ class Parser {
         var asiState = ASIState.NONE
         stack.addFirst("I0" to 0)
         while(parseIndex < inputMut.size || stack.isNotEmpty()) {
-            println("now: ${stack.first().first} to ${inputMut.getOrNull(parseIndex)?.kind}")
+            //println("now: ${stack.first().first} to ${inputMut.getOrNull(parseIndex)?.kind}")
             if(inputMut[parseIndex].kind == LineTerminator.ordinal) {
                 previousIsLineTerminator = inputMut[parseIndex]
                 parseIndex++
@@ -47,7 +47,7 @@ class Parser {
             if(transition?.kind == DragonParserGenerator.TransitionKind.SHIFT
                 && previousIsLineTerminator != null) {
                 //自動セミコロン挿入(Restricted Token)
-                println("!!!!${stack.first()} .. ${inputMut[parseIndex].kind}")
+                //println("!!!!${stack.first()} .. ${inputMut[parseIndex].kind}")
                 if(((stack.first().second == LeftHandSideExpression.ordinal
                         || stack.first().second == LeftHandSideExpressionForStmt.ordinal)
                     && (inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["++"] || inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["--"]))
@@ -64,7 +64,7 @@ class Parser {
                     )
                     previousIsLineTerminator = null
                     asiState = ASIState.WAIT_SHIFT
-                    println("ASI: $parseIndex => $inputMut")
+                    //println("ASI: $parseIndex => $inputMut")
                     continue
                 }
             }
@@ -136,7 +136,7 @@ class Parser {
                         )
                         previousIsLineTerminator = null
                         asiState = ASIState.WAIT_SHIFT
-                        println("ASI: $parseIndex => $inputMut")
+                        //println("ASI: $parseIndex => $inputMut")
                         continue
                     }
                     else if(inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["}"] || inputMut[parseIndex].kind == EcmaGrammar.operatorsMap["$"]) {
@@ -153,7 +153,7 @@ class Parser {
                         )
                         previousIsLineTerminator = null
                         asiState = ASIState.WAIT_SHIFT
-                        println("ASI: $parseIndex => $inputMut")
+                        //println("ASI: $parseIndex => $inputMut")
                         continue
                     }
                     throw Exception("パースエラー: $stack, $parseIndex")
@@ -164,7 +164,7 @@ class Parser {
             println("受理されませんでした ${nodeStack.first()}")
             return null
         }
-        println("nodeInternal: ")
+        //println("nodeInternal: ")
         //nodeStack.first().print("")
         return nodeStack.first()
     }

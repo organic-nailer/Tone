@@ -1,18 +1,18 @@
-class GlobalObject(refPoolManager: ByteCompiler.RefPoolManager): ObjectData(refPoolManager) {
+class GlobalObject: ObjectData() {
     override val prototype: ObjectData? = null //実装依存
     override val className: String = "Global" //実装依存
 
     init {
-        namedProperties["NaN"] = refPoolManager.setReference(PropertyDescriptor.data(
+        namedProperties["NaN"] = PropertyDescriptor.data(
             NumberData.naN(), address = 0, writable = false,
             enumerable = false, configurable = false
-        ), "NaN", false) //TODO: strict
-        namedProperties["Infinity"] = refPoolManager.setReference(PropertyDescriptor.data(
+        )
+        namedProperties["Infinity"] = PropertyDescriptor.data(
             NumberData.infiniteP(), writable = false, address = 0,
-            enumerable = false, configurable = false), "Infinity", false) //TODO: strict
-        namedProperties["undefined"] = refPoolManager.setReference(PropertyDescriptor.data(
+            enumerable = false, configurable = false)
+        namedProperties["undefined"] = PropertyDescriptor.data(
             UndefinedData(), writable = false, address = 0,
-            enumerable = false, configurable = false), "undefined", false) //TODO: strict
+            enumerable = false, configurable = false)
     }
 
     //ValueProperties=[NaN,Infinity,undefined]
@@ -28,11 +28,11 @@ class GlobalObject(refPoolManager: ByteCompiler.RefPoolManager): ObjectData(refP
     //Math,JSON
 }
 
-class NormalObject(refPoolManager: ByteCompiler.RefPoolManager): ObjectData(refPoolManager) {
-    override val prototype: ObjectData = PrototypeObject(refPoolManager)
+class NormalObject: ObjectData() {
+    override val prototype: ObjectData = PrototypeObject()
 }
 
-class PrototypeObject(refPoolManager: ByteCompiler.RefPoolManager): ObjectData(refPoolManager) {
+class PrototypeObject: ObjectData() {
     override val prototype: ObjectData? = null
     override val className: String = "Object"
     override val extensible: Boolean = true
@@ -46,12 +46,12 @@ class PrototypeObject(refPoolManager: ByteCompiler.RefPoolManager): ObjectData(r
     //propertyIsEnumerable
 }
 
-class FunctionObject(refPoolManager: ByteCompiler.RefPoolManager): ObjectData(refPoolManager) {
-    override val prototype: ObjectData = FunctionPrototypeObject(refPoolManager)
+class FunctionObject: ObjectData() {
+    override val prototype: ObjectData = FunctionPrototypeObject()
 }
 
-class FunctionPrototypeObject(refPoolManager: ByteCompiler.RefPoolManager): ObjectData(refPoolManager) {
-    override val prototype: ObjectData = PrototypeObject(refPoolManager)
+class FunctionPrototypeObject: ObjectData() {
+    override val prototype: ObjectData = PrototypeObject()
     override val className: String = "Function"
     override val extensible: Boolean = true
 
