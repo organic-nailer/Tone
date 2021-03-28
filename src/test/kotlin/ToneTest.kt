@@ -93,8 +93,7 @@ class ToneTest {
     @Test
     fun globalVariableTest() {
         val result = run("""
-            var x;
-            x = 2;
+            var x = 2;
             x + 1;
         """.trimIndent())
         println(result)

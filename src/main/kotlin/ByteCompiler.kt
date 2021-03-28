@@ -102,7 +102,14 @@ class ByteCompiler {
                 }
             }
             NodeType.VariableDeclaration -> {
-                //TODO: Implement
+                node.declarations!!.forEach { declaration ->
+                    if(declaration.init != null) {
+                        compile(declaration.id!!)
+                        compile(declaration.init)
+                        byteLines.add(ByteOperation(OpCode.Assign, null))
+                        byteLines.add(ByteOperation(OpCode.Pop, null))
+                    }
+                }
                 byteLines.add(ByteOperation(OpCode.Push, "empty"))
             }
             NodeType.BinaryExpression -> {
