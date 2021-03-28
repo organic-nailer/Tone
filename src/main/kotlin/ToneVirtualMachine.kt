@@ -18,7 +18,7 @@ class ToneVirtualMachine {
         val mainStack = ArrayDeque<StackData>()
         var counter = 0
         while(counter < code.size) {
-            //println("$counter: $mainStack")
+            println("$counter: $mainStack")
             val operation = code[counter]
             when(operation.opCode) {
                 ByteCompiler.OpCode.Push -> {
@@ -209,8 +209,9 @@ class ToneVirtualMachine {
                     }
                 }
                 ByteCompiler.OpCode.GetValue -> {
-                    val expr = mainStack.first()
-                    getValue(expr)
+                    val expr = mainStack.removeFirst()
+                    val value = getValue(expr)
+                    mainStack.addFirst(value.toStack())
                 }
                 ByteCompiler.OpCode.TypeOf -> {
                     throw NotImplementedError()

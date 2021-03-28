@@ -243,7 +243,7 @@ fun declarationBindingInstantiation(variableEnvironment: Environment, code: List
 //            env.setMutableBinding("arguments", argsObj, false)
 //        }
     }
-    code.filter { it.type == Parser.NodeType.VariableDeclaration }.forEach { ds ->
+    findVariableDeclaration(code).forEach { ds ->
         ds.declarations?.forEach { d ->
             val dn = d.id!!.name!!
             val varAlreadyDeclared = env.hasBinding(dn)
@@ -253,4 +253,46 @@ fun declarationBindingInstantiation(variableEnvironment: Environment, code: List
             }
         }
     }
+}
+
+private fun findVariableDeclaration(code: List<Parser.Node>): List<Parser.Node> {
+    val result = mutableListOf<Parser.Node>()
+    code.forEach { c ->
+        when(c.type) {
+            Parser.NodeType.VariableDeclaration -> result.add(c)
+            Parser.NodeType.BlockStatement,
+            Parser.NodeType.WhileStatement,
+            Parser.NodeType.DoWhileStatement -> {
+                c.body?.let { result.addAll(findVariableDeclaration(it)) }
+            }
+            Parser.NodeType.IfStatement -> {
+                c.consequent?.let { result.addAll(findVariableDeclaration(listOf(it))) }
+                c.alternate?.let { result.addAll(findVariableDeclaration(listOf(it))) }
+            }
+            Parser.NodeType.ForStatement -> {
+                c.body?.let { result.addAll(findVariableDeclaration(it)) }
+                if(c.init?.type == Parser.NodeType.VariableDeclaration) {
+                    result.add(c.init)
+                }
+            }
+            Parser.NodeType.ForInStatement -> {
+                c.body?.let { result.addAll(findVariableDeclaration(it)) }
+                if(c.left?.type == Parser.NodeType.VariableDeclaration) {
+                    result.add(c.left)
+                }
+            }
+            Parser.NodeType.SwitchStatement -> {
+                c.cases?.forEach { case ->
+                    case.consequents?.let { result.addAll(findVariableDeclaration(it)) }
+                }
+            }
+            Parser.NodeType.TryStatement -> {
+                c.block?.let { result.addAll(findVariableDeclaration(listOf(it))) }
+                //catchは別？
+                c.finalizer?.let { result.addAll(findVariableDeclaration(listOf(it))) }
+            }
+            else -> { }
+        }
+    }
+    return result
 }

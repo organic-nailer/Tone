@@ -111,4 +111,56 @@ class ToneTest {
         println(result)
         Assert.assertEquals(5, (result as? NumberStackData)?.value)
     }
+
+    @Test
+    fun doWhileTest() {
+        val result = run("""
+            var i = 0;
+            do {
+                i += 1;
+            } while(i < 5)
+            i;
+        """.trimIndent())
+        println(result)
+        Assert.assertEquals(5, (result as? NumberStackData)?.value)
+    }
+
+    @Test
+    fun whileTest() {
+        val result = run("""
+            var i = 0;
+            while(i < 5) {
+                i += 1;
+            }
+            i;
+        """.trimIndent())
+        println(result)
+        Assert.assertEquals(5, (result as? NumberStackData)?.value)
+    }
+
+    @Test
+    fun forTest() {
+        val result = run("""
+            var i;
+            var j = 0;
+            for(i = 0; i < 5; i += 1) {
+                j = i;
+            }
+            i + j;
+        """.trimIndent())
+        println(result)
+        Assert.assertEquals(9, (result as? NumberStackData)?.value)
+    }
+
+    @Test
+    fun forVarTest() {
+        val result = run("""
+            for(var i = 0; i < 5; i += 1) {
+                i + 1;
+            }
+            i;
+        """.trimIndent())
+        println(result)
+        Assert.assertEquals(5, (result as? NumberStackData)?.value)
+    }
 }

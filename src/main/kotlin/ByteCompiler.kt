@@ -47,6 +47,7 @@ class ByteCompiler {
             NodeType.ExpressionStatement -> {
                 node.expression?.let {
                     compile(it)
+                    byteLines.add(ByteOperation(OpCode.GetValue, null))
                 }
                 return
             }
@@ -100,6 +101,81 @@ class ByteCompiler {
                     compile(node.alternate)
                     labelTable[label2] = byteLines.size
                 }
+            }
+            NodeType.DoWhileStatement -> {
+                //TODO: continue, break
+                byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                val labelStart = "L${uniqueLabelIndex++}"
+                labelTable[labelStart] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+                compile(node.bodySingle!!)
+                val label = "L${uniqueLabelIndex++}"
+                byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                byteLines.add(ByteOperation(OpCode.Swap, null))
+                labelTable[label] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+                compile(node.test!!)
+                byteLines.add(ByteOperation(OpCode.IfTrue, labelStart))
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+            }
+            NodeType.WhileStatement -> {
+                //TODO: continue, break
+                byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                val labelStart = "L${uniqueLabelIndex++}"
+                labelTable[labelStart] = byteLines.size
+                compile(node.test!!)
+                val labelEnd = "L${uniqueLabelIndex++}"
+                byteLines.add(ByteOperation(OpCode.IfFalse, labelEnd))
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+                compile(node.bodySingle!!)
+                val label = "L${uniqueLabelIndex++}"
+                byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                byteLines.add(ByteOperation(OpCode.Swap, null))
+                labelTable[label] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Goto, labelStart))
+                labelTable[labelEnd] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+            }
+            NodeType.ForStatement -> {
+                //TODO: continue, break
+                if(node.init?.type == NodeType.VariableDeclaration) {
+                    compile(node.init)
+                }
+                else {
+                    node.init?.let { compile(it) }
+                    byteLines.add(ByteOperation(OpCode.GetValue, null))
+                }
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+                byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                val labelStart = "L${uniqueLabelIndex++}"
+                labelTable[labelStart] = byteLines.size
+                val labelEnd = "L${uniqueLabelIndex++}"
+                node.test?.let {
+                    compile(it)
+                    byteLines.add(ByteOperation(OpCode.IfFalse, labelEnd))
+                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                }
+                compile(node.bodySingle!!)
+                val label = "L${uniqueLabelIndex++}"
+                byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                byteLines.add(ByteOperation(OpCode.Swap, null))
+                labelTable[label] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+
+                node.update?.let {
+                    compile(it)
+                    byteLines.add(ByteOperation(OpCode.GetValue, null))
+                    byteLines.add(ByteOperation(OpCode.Pop, null))
+                }
+
+                byteLines.add(ByteOperation(OpCode.Goto, labelStart))
+                labelTable[labelEnd] = byteLines.size
+                byteLines.add(ByteOperation(OpCode.Pop, null))
+            }
+            NodeType.ForInStatement -> {
+                throw NotImplementedError()
             }
             NodeType.VariableDeclaration -> {
                 node.declarations!!.forEach { declaration ->
@@ -234,7 +310,6 @@ class ByteCompiler {
                     byteLines.add(ByteOperation(code, null))
                     byteLines.add(ByteOperation(OpCode.Assign, null))
                 }
-                //TODO: operators
             }
             NodeType.Literal -> {
                 if(node.raw == "null"
