@@ -79,8 +79,8 @@ data class NumberData(
         if(other.kind == NumberKind.ZeroN || other.kind == NumberKind.ZeroP) {
             return this
         }
-        if(this.value.sign + this.value.sign == 0
-            && abs(this.value) == abs(this.value)
+        if(this.value.sign + other.value.sign == 0
+            && abs(this.value) == abs(other.value)
         ) {
             return zeroP()
         }

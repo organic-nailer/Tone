@@ -370,6 +370,7 @@ object EcmaGrammar {
         "$Catch ::= catch ( $Identifier ) $Block",
         "$Finally ::= finally $Block",
         "$DebuggerStatement ::= debugger ;",
+
         "$Statement ::= $Block" +
             " $OR $VariableStatement" +
             " $OR $EmptyStatement" +

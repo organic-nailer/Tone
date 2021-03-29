@@ -264,6 +264,10 @@ class ToneVirtualMachine {
                     putValue(lRef, rVal)
                     mainStack.addFirst(rVal.toStack())
                 }
+                ByteCompiler.OpCode.Copy -> {
+                    val first = mainStack.first()
+                    mainStack.addFirst(first)
+                }
             }
             counter++
         }

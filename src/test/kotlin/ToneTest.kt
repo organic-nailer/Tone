@@ -206,4 +206,31 @@ class ToneTest {
         println(result)
         Assert.assertEquals(6, (result as? NumberStackData)?.value)
     }
+
+    @Test
+    fun switchTest() {
+        val result = run("""
+            var a = 0;
+            switch(a) {
+                case -1:
+                    break;
+                case 0:
+                    a += 1;
+                case 1:
+                case 2:
+                    a += 2;
+                default:
+                    a += 4;
+                    break;
+                case 3:
+                    a += 8;
+                    break;
+                case 4:
+                    break;
+            }
+            a;
+        """.trimIndent())
+        println(result)
+        Assert.assertEquals(7, (result as? NumberStackData)?.value)
+    }
 }

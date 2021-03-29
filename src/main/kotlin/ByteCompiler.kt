@@ -212,6 +212,58 @@ class ByteCompiler {
                 scopeStack.removeFirst()
                 throw NotImplementedError()
             }
+            NodeType.SwitchStatement -> {
+                val labelBreak = "L${uniqueLabelIndex++}"
+                scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak))
+
+
+                val labelEnd = "L${uniqueLabelIndex++}"
+                byteLines.add(ByteOperation(OpCode.Push, "empty"))
+
+                compile(node.discriminant!!)
+
+
+                val default = node.cases!!.indexOfFirst { it.test == null }
+                val caseLabels = node.cases.map { "L${uniqueLabelIndex++}" }
+                node.cases.forEachIndexed { index, case ->
+                    case.test?.let {
+                        byteLines.add(ByteOperation(OpCode.Copy))
+                        compile(it)
+                        byteLines.add(ByteOperation(OpCode.EqS))
+                        byteLines.add(ByteOperation(OpCode.IfTrue, caseLabels[index]))
+                        byteLines.add(ByteOperation(OpCode.Pop))
+                    }
+                }
+                if(default >= 0) {
+                    byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                    byteLines.add(ByteOperation(OpCode.Goto, caseLabels[default]))
+                }
+                else {
+                    byteLines.add(ByteOperation(OpCode.Pop))
+                    byteLines.add(ByteOperation(OpCode.Goto, labelEnd))
+                }
+                node.cases.forEachIndexed { index, case ->
+                    labelTable[caseLabels[index]] = byteLines.size
+                    byteLines.add(ByteOperation(OpCode.Pop))
+                    byteLines.add(ByteOperation(OpCode.Pop))
+                    case.consequents?.forEach { element ->
+                        compile(element)
+                        val label = "L${uniqueLabelIndex++}"
+                        byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                        byteLines.add(ByteOperation(OpCode.Swap))
+                        labelTable[label] = byteLines.size
+                        byteLines.add(ByteOperation(OpCode.Pop))
+                    }
+                    if(index+1 != node.cases.size) {
+                        byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                        byteLines.add(ByteOperation(OpCode.Push, "empty"))
+                    }
+                }
+                labelTable[labelEnd] = byteLines.size
+                labelTable[labelBreak] = byteLines.size
+
+                scopeStack.removeFirst()
+            }
             NodeType.BreakStatement -> {
                 if(node.label != null) {
                     val label = node.label.name!!
@@ -487,7 +539,7 @@ class ByteCompiler {
         GT, GTE, LT, LTE, InstanceOf, In,
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
-        GetValue, IfEmpty, Swap, Assign
+        GetValue, IfEmpty, Swap, Assign, Copy
     }
 
     data class ScopeData(
