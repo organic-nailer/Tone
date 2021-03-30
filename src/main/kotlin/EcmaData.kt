@@ -173,14 +173,14 @@ open class ObjectData: EcmaData() {
     open val prototype: ObjectData? = null
     open val className: String = ""
     open val extensible: Boolean = true
-    fun get(propertyName: String): EcmaData? {
+    open fun get(propertyName: String): EcmaData? {
         val desc = getProperty(propertyName) ?: return null
         if(desc.type == PropertyDescriptor.DescriptorType.Data) return desc.value
         val getter = desc.get ?: return null
         //return getter.[[Call]](this)
         throw NotImplementedError()
     }
-    fun getOwnProperty(propertyName: String): PropertyDescriptor? {
+    open fun getOwnProperty(propertyName: String): PropertyDescriptor? {
         if(!namedProperties.containsKey(propertyName)) {
             return null
         }
@@ -241,7 +241,7 @@ open class ObjectData: EcmaData() {
         val desc = getProperty(propertyName)
         return desc != null
     }
-    fun delete(propertyName: String, throwFlag: Boolean): Boolean {
+    open fun delete(propertyName: String, throwFlag: Boolean): Boolean {
         val desc = getOwnProperty(propertyName) ?: return true
         if(desc.configurable == true) {
             namedProperties.remove(propertyName)
@@ -280,7 +280,7 @@ open class ObjectData: EcmaData() {
         }
         throw Exception("TypeError") //TODO: TypeError
     }
-    fun defineOwnProperty(propertyName: String, descriptor: PropertyDescriptor, throwFlag: Boolean): Boolean {
+    open fun defineOwnProperty(propertyName: String, descriptor: PropertyDescriptor, throwFlag: Boolean): Boolean {
         val current = getOwnProperty(propertyName)
         if(current == null && !extensible) {
             if(throwFlag) throw Exception("TypeError") //TODO: TypeError
@@ -372,12 +372,12 @@ open class ObjectData: EcmaData() {
     }
 
     open val primitiveValue: EcmaPrimitive? = null
-    open val construct: Function<ObjectData>? = null
-    open val call: Function<ReferenceStackData?>? = null
-    open val hasInstance: Function<Boolean>? = null
+    open val construct: ((List<Any>) -> ObjectData)? = null
+    open val call: ((EcmaData,List<EcmaData>,GlobalObject) -> StackData)? = null
+    open val hasInstance: ((Any) -> Boolean)? = null
     open val scope: Environment? = null
     open val formalParameters: List<String>? = null
-    open val code: Any? = null
+    open val code: Parser.Node? = null
     open val targetFunction: ObjectData? = null
     open val boundThis: Any? = null
     open val boundArguments: List<Any>? = null

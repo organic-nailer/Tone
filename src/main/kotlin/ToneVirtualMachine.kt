@@ -1,3 +1,4 @@
+import TypeConverter.isCallable
 import TypeConverter.toBoolean
 import TypeConverter.toInt32
 import TypeConverter.toNumber
@@ -267,6 +268,36 @@ class ToneVirtualMachine {
                 ByteCompiler.OpCode.Copy -> {
                     val first = mainStack.first()
                     mainStack.addFirst(first)
+                }
+                ByteCompiler.OpCode.Call -> {
+                    val argSize = (operandToData(operation.operand) as NumberStackData).value
+                    val arguments = mutableListOf<EcmaData>()
+                    for(i in 0 until argSize) {
+                        val argRef = mainStack.removeFirst()
+                        val value = getValue(argRef)
+                        arguments.add(0, value)
+                    }
+                    val ref = mainStack.removeFirst()
+                    val func = getValue(ref)
+                    if(func !is ObjectData) throw Exception("TypeError")
+                    if(!isCallable(func)) throw Exception("TypeError")
+                    var thisValue: EcmaData
+                    if(ref is ReferenceStackData) {
+                        val referenceData = refPool[ref.address]!!
+                        if(referenceData.isPropertyReference()) {
+                            thisValue = referenceData.base as EcmaData
+                        }
+                        else {
+                            thisValue = (referenceData.base as EnvironmentRecords).implicitThisValue()
+                        }
+                    }
+                    else {
+                        thisValue = UndefinedData()
+                    }
+                    return func.call!!.invoke(thisValue, arguments, global)
+                }
+                ByteCompiler.OpCode.Return -> {
+                    return mainStack.first()
                 }
             }
             counter++

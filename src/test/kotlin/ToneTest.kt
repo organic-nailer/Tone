@@ -18,7 +18,7 @@ class ToneTest {
             return null
         }
         val compiler = ByteCompiler()
-        compiler.run(node)
+        compiler.runGlobal(node, GlobalObject())
         compiler.byteLines.forEach { op ->
             println("${op.opCode} ${op.operand ?: ""}")
         }
@@ -232,5 +232,20 @@ class ToneTest {
         """.trimIndent())
         println(result)
         Assert.assertEquals(7, (result as? NumberStackData)?.value)
+    }
+
+    @Test
+    fun globalFunctionTest() {
+        val code = """
+            function add(a,b) {
+                return a + b;
+            }
+            add(1,2);
+        """.trimIndent()
+        val result = run(code)
+        println("\ncode=")
+        println(code)
+        println("\nresult=$result")
+        Assert.assertEquals(3, (result as? NumberStackData)?.value)
     }
 }

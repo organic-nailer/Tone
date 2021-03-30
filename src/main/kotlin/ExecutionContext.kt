@@ -6,22 +6,54 @@ class ExecutionContext(
     val thisBinding: ObjectData
 ) {
     companion object {
-        fun global(): ExecutionContext {
-            val globalObj = GlobalObject()
+        fun global(globalObj: GlobalObject, code: Parser.Node, strict: Boolean): ExecutionContext {
             val globalEnvironment = newObjectEnvironment(globalObj, null)
-            return ExecutionContext(
+            val context =  ExecutionContext(
                 globalEnvironment,
                 globalEnvironment,
                 globalObj
             )
+            declarationBindingInstantiation(
+                context.variableEnvironment, code,
+                ContextMode.Global, strict,
+                null, null,
+                globalObj
+            )
+            return context
         }
 
         fun eval(): ExecutionContext {
             TODO()
         }
 
-        fun functionContext(): ExecutionContext {
-            TODO()
+        fun function(
+            f: FunctionObject,
+            thisArg: EcmaData?,
+            arguments: List<EcmaData>,
+            globalObject: GlobalObject
+        ): ExecutionContext {
+            val thisBinding = if(f.strict) {
+                thisArg
+            } else if(thisArg == null || thisArg is UndefinedData || thisArg is NullData) {
+                globalObject
+            } else if(thisArg !is ObjectData) {
+                TypeConverter.toObject(thisArg)
+            } else {
+                thisArg
+            }
+            val localEnv = newDeclarativeEnvironment(f.scope)
+            val context = ExecutionContext(
+                thisBinding = thisBinding as ObjectData, //TODO 角煮
+                lexicalEnvironment = localEnv,
+                variableEnvironment = localEnv
+            )
+            declarationBindingInstantiation(
+                context.variableEnvironment, f.code,
+                ContextMode.Function, f.strict,
+                f, arguments,
+                globalObject
+            )
+            return context
         }
     }
 
@@ -79,8 +111,7 @@ class DeclarativeEnvironmentRecords : EnvironmentRecords() {
             if(strict) throw Exception("ReferenceError") //TODO: ReferenceError
             return UndefinedData()
         }
-        throw NotImplementedException()
-        //return current!!
+        return current.value!!
     }
 
     override fun deleteBinding(identifier: String): Boolean {
@@ -199,51 +230,69 @@ fun newObjectEnvironment(obj: ObjectData, outer: Environment?): Environment {
 }
 
 enum class ContextMode { Eval, Function, Global }
-fun declarationBindingInstantiation(variableEnvironment: Environment, code: List<Parser.Node>, mode: ContextMode, strict: Boolean) {
+fun declarationBindingInstantiation(
+    variableEnvironment: Environment,
+    code: Parser.Node,
+    mode: ContextMode,
+    strict: Boolean,
+    func: FunctionObject?,
+    args: List<EcmaData>?,
+    globalObj: GlobalObject
+) {
     val env = variableEnvironment.records
     val configurableBindings = mode == ContextMode.Eval
     if(mode == ContextMode.Function) {
-        TODO()
+        val names = func!!.formalParameters ?: listOf()
+        val argCount = args!!.size
+        var n = 0
+        for(argName in names) {
+            val v = if(n < argCount) args[n] else UndefinedData()
+            val argAlreadyDeclared = env.hasBinding(argName)
+            if(!argAlreadyDeclared) {
+                env.createMutableBinding(argName, false) //TODO: deletable
+            }
+            env.setMutableBinding(argName, v, strict)
+            n++
+        }
     }
-//    code.filter { it.type == Parser.NodeType.FunctionDeclaration }.forEach { f ->
-//        val fn = f.id!!.name!!
-//        //val fo = result of instantiating FunctionDeclaration
-//        val funcAlreadyDeclared = env.hasBinding(fn)
-//        if(!funcAlreadyDeclared) {
-//            env.createMutableBinding(fn, configurableBindings)
-//        }
-//        else if(mode == ContextMode.Global) {
-//            //Global Object
-//            val go = (variableEnvironment.records as ObjectEnvironmentRecords).bindings
-//            val existingProp = go.getProperty(fn)
-//            if(existingProp?.configurable == true) {
-//                go.defineOwnProperty(fn, ObjectData.PropertyDescriptor.data(
-//                    value = UndefinedData(), writable = true, address = 0,
-//                    enumerable = true, configurable = configurableBindings
-//                ), throwFlag = true)
-//            }
-//            else if(existingProp?.type == ObjectData.PropertyDescriptor.DescriptorType.Accessor
-//                || (existingProp?.writable != true || existingProp.enumerable != true)) {
-//                throw Exception("TypeError") //TODO: TypeError
-//            }
-//        }
-//        env.setMutableBinding(fn, fo, strict)
-//    }
+    code.body?.filter { it.type == Parser.NodeType.FunctionDeclaration }?.forEach { f ->
+        val fn = f.id!!.name!!
+        val fo = FunctionObject(f.params!!.map { it.name!! }, f.bodySingle!!, variableEnvironment, false) //TODO: strict
+        val funcAlreadyDeclared = env.hasBinding(fn)
+        if(!funcAlreadyDeclared) {
+            env.createMutableBinding(fn, configurableBindings)
+        }
+        else if(mode == ContextMode.Global) {
+            val go = globalObj
+            val existingProp = go.getProperty(fn)
+            if(existingProp?.configurable == true) {
+                go.defineOwnProperty(fn, ObjectData.PropertyDescriptor.data(
+                    value = UndefinedData(), writable = true, address = 0,
+                    enumerable = true, configurable = configurableBindings
+                ), throwFlag = true)
+            }
+            else if(existingProp?.type == ObjectData.PropertyDescriptor.DescriptorType.Accessor
+                || (existingProp?.writable != true || existingProp.enumerable != true)) {
+                throw Exception("TypeError") //TODO: TypeError
+            }
+        }
+        env.setMutableBinding(fn, fo, strict)
+    }
     val argumentsAlreadyDeclared = env.hasBinding("arguments")
     if(mode == ContextMode.Function && !argumentsAlreadyDeclared) {
-        throw NotImplementedException()
-//        val argsObj = createArgumentsObject(func, names, args, env, strict)
-//        if(strict) {
-//            env as DeclarativeEnvironmentRecords
-//            env.createImmutableBinding("arguments")
-//            env.initializeImmutableBinding("arguments", argsObj)
-//        }
-//        else {
-//            env.createMutableBinding("arguments")
-//            env.setMutableBinding("arguments", argsObj, false)
-//        }
+        val names = func!!.formalParameters ?: listOf()
+        val argsObj = ArgumentsObject(func, names, args!!, variableEnvironment, strict)
+        if(strict) {
+            env as DeclarativeEnvironmentRecords
+            env.createImmutableBinding("arguments")
+            env.initializeImmutableBinding("arguments", argsObj)
+        }
+        else {
+            env.createMutableBinding("arguments", false) //TODO deletable
+            env.setMutableBinding("arguments", argsObj, false)
+        }
     }
-    findVariableDeclaration(code).forEach { ds ->
+    findVariableDeclaration(code.body ?: listOf()).forEach { ds ->
         ds.declarations?.forEach { d ->
             val dn = d.id!!.name!!
             val varAlreadyDeclared = env.hasBinding(dn)

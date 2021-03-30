@@ -9,13 +9,55 @@ class ByteCompiler {
     val refPool = mutableListOf<ReferenceData>()
     var globalObject: GlobalObject? = null
 
-    fun run(node: Node) {
+    fun runGlobal(code: Node, global: GlobalObject) {
         byteLines.clear()
         labelTable.clear()
         contextStack.clear()
-        compile(node)
+
+        val progCxt = ExecutionContext.global(global, code, false) //TODO: Strict
+        globalObject = global
+        contextStack.addFirst(progCxt)
+        scopeStack.addFirst(ScopeData(NodeType.Program))
+
+        compile(code)
+
+        scopeStack.removeFirst()
+        contextStack.removeFirst()
+
         replaceLabel()
     }
+
+    fun runFunction(
+        f: FunctionObject,
+        thisArg: EcmaData?,
+        arguments: List<EcmaData>,
+        global: GlobalObject
+    ) {
+        byteLines.clear()
+        labelTable.clear()
+        contextStack.clear()
+
+        val context = ExecutionContext.function(
+            f, thisArg, arguments, global
+        )
+        globalObject = global
+        contextStack.addFirst(context)
+        scopeStack.addFirst(ScopeData(NodeType.FunctionDeclaration))
+
+        compile(f.code)
+
+        scopeStack.removeFirst()
+        contextStack.removeFirst()
+        replaceLabel()
+    }
+
+//    fun run(node: Node) {
+//        byteLines.clear()
+//        labelTable.clear()
+//        contextStack.clear()
+//        compile(node)
+//        replaceLabel()
+//    }
 
     private fun compile(node: Node, scopeLabel: String? = null, noScope: Boolean = false) {
         when(node.type) {
@@ -24,14 +66,6 @@ class ByteCompiler {
                     byteLines.add(ByteOperation(OpCode.Push, "empty"))
                     return
                 }
-                val progCxt = ExecutionContext.global()
-                declarationBindingInstantiation(
-                    progCxt.variableEnvironment, node.body,
-                    ContextMode.Global, false //TODO: Strict
-                )
-                contextStack.addFirst(progCxt)
-                globalObject = progCxt.thisBinding as GlobalObject
-                scopeStack.addFirst(ScopeData(node.type))
                 node.body.forEachIndexed { i, element ->
                     compile(element)
                     if(i != 0) {
@@ -42,8 +76,23 @@ class ByteCompiler {
                         byteLines.add(ByteOperation(OpCode.Pop))
                     }
                 }
-                scopeStack.removeFirst()
-                contextStack.removeFirst()
+                return
+            }
+            NodeType.FunctionDeclaration -> {
+                if(node.body.isNullOrEmpty()) {
+                    byteLines.add(ByteOperation(OpCode.Push, "undefined"))
+                    return
+                }
+                node.body.forEachIndexed { i, element ->
+                    compile(element)
+                    if(i != 0) {
+                        val label = "L${uniqueLabelIndex++}"
+                        byteLines.add(ByteOperation(OpCode.IfEmpty, label))
+                        byteLines.add(ByteOperation(OpCode.Swap))
+                        labelTable[label] = byteLines.size
+                        byteLines.add(ByteOperation(OpCode.Pop))
+                    }
+                }
                 return
             }
             //Statementは評価後一つの値を残す。値がない場合はemptyを残す
@@ -87,7 +136,7 @@ class ByteCompiler {
                 val labelBreak = "L${uniqueLabelIndex++}"
                 scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak = labelBreak))
                 if(node.alternate == null) { //elseなし
-                    node.test?.let { compile(it) }
+                    compile(node.test!!)
                     val label = "L${uniqueLabelIndex++}"
                     byteLines.add(ByteOperation(OpCode.IfFalse, label))
                     byteLines.add(ByteOperation(OpCode.Pop))
@@ -100,7 +149,7 @@ class ByteCompiler {
                     labelTable[label2] = byteLines.size
                 }
                 else { //elseあり
-                    node.test?.let { compile(it) }
+                    compile(node.test!!)
                     val label = "L${uniqueLabelIndex++}"
                     byteLines.add(ByteOperation(OpCode.IfFalse, label))
                     byteLines.add(ByteOperation(OpCode.Pop))
@@ -315,7 +364,7 @@ class ByteCompiler {
                         && scope.type != NodeType.WhileStatement
                         && scope.type != NodeType.ForStatement
                         && scope.type != NodeType.ForInStatement) throw Exception("SyntaxError")
-                    for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) {
+                    for(i in 0 until scopeIndex + 1 - (if(noScope) 1 else 0)) {
                         byteLines.add(ByteOperation(OpCode.Pop))
                     }
                     byteLines.add(ByteOperation(OpCode.Goto, scope.labelContinue!!))
@@ -333,7 +382,7 @@ class ByteCompiler {
                     val scope = scopeStack[scopeIndex]
                     if(scope.type == NodeType.FunctionExpression
                         || scope.type == NodeType.FunctionDeclaration) throw Exception("SyntaxError")
-                    for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) {
+                    for(i in 0 until scopeIndex + 1 - (if(noScope) 1 else 0)) {
                         byteLines.add(ByteOperation(OpCode.Pop))
                     }
                     byteLines.add(ByteOperation(OpCode.Goto, scope.labelContinue!!))
@@ -350,6 +399,16 @@ class ByteCompiler {
                 else {
                     compile(node.bodySingle!!, node.label!!.name)
                 }
+            }
+            NodeType.ReturnStatement -> {
+                scopeStack.find { it.type == NodeType.FunctionDeclaration }
+                    ?: throw Exception("SyntaxError")
+                node.argument?.let {
+                    compile(it)
+                } ?: kotlin.run {
+                    byteLines.add(ByteOperation(OpCode.Push, "undefined"))
+                }
+                byteLines.add(ByteOperation(OpCode.Return))
             }
             NodeType.VariableDeclaration -> {
                 node.declarations!!.forEach { declaration ->
@@ -485,6 +544,13 @@ class ByteCompiler {
                     byteLines.add(ByteOperation(OpCode.Assign))
                 }
             }
+            NodeType.CallExpression -> {
+                compile(node.callee!!)
+                node.arguments!!.forEach {
+                    compile(it)
+                }
+                byteLines.add(ByteOperation(OpCode.Call, node.arguments.size.toString()))
+            }
             NodeType.Literal -> {
                 if(node.raw == "null"
                     || node.raw == "true"
@@ -539,7 +605,8 @@ class ByteCompiler {
         GT, GTE, LT, LTE, InstanceOf, In,
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
-        GetValue, IfEmpty, Swap, Assign, Copy
+        GetValue, IfEmpty, Swap, Assign, Copy, Call,
+        Return
     }
 
     data class ScopeData(

@@ -62,6 +62,27 @@ object TypeConverter {
         return true //TODO: StringとObject
     }
 
+    fun toString(value: EcmaData): String {
+        return when(value) {
+            is UndefinedData -> "undefined"
+            is NullData -> "null"
+            is BooleanData -> if(value.value) "true" else "false"
+            is NumberData -> {
+                if(value.kind == NumberData.NumberKind.NaN) "NaN"
+                else if(value.isZero()) "0"
+                else if(!value.sign()) "-" + toString(-value)
+                else if(value.isInfinite()) "Infinity"
+                else value.value.toString() //TODO 正確な
+            }
+            is StringData -> value.value //TODO ??
+            is ObjectData -> {
+                val primValue = toPrimitive(value) //TODO ??
+                toString(primValue)
+            }
+            else -> throw Exception()
+        }
+    }
+
     fun toObject(value: EcmaData): ObjectData {
         when(value) {
             is UndefinedData -> throw Exception("TypeError")
@@ -76,8 +97,7 @@ object TypeConverter {
 
     fun isCallable(value: EcmaData): Boolean {
         if(value !is ObjectData) return false
-        //return value.value.has([[Call]])
-        throw NotImplementedException()
+        return value.call != null
     }
 
     fun sameValue(x: EcmaData, y: EcmaData): Boolean {
