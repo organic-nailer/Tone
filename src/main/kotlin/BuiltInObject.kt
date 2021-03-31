@@ -4,14 +4,14 @@ class GlobalObject: ObjectData() {
 
     init {
         namedProperties["NaN"] = PropertyDescriptor.data(
-            NumberData.naN(), address = 0, writable = false,
+            NumberData.naN(), writable = false,
             enumerable = false, configurable = false
         )
         namedProperties["Infinity"] = PropertyDescriptor.data(
-            NumberData.infiniteP(), writable = false, address = 0,
+            NumberData.infiniteP(), writable = false,
             enumerable = false, configurable = false)
         namedProperties["undefined"] = PropertyDescriptor.data(
-            UndefinedData(), writable = false, address = 0,
+            UndefinedData(), writable = false,
             enumerable = false, configurable = false)
     }
 
@@ -109,16 +109,16 @@ class FunctionObject(
 
     init {
         namedProperties["length"] = PropertyDescriptor.data(
-            NumberData.real(formalParameterList?.size ?: 0), 0,
+            NumberData.real(formalParameterList?.size ?: 0),
             writable = false, enumerable = false, configurable = false
         )
         val proto = NormalObject()
         proto.defineOwnProperty("constructor", PropertyDescriptor.data(
-            this, 0,
+            this,
             writable = true, enumerable = false, configurable = true
         ), false)
         namedProperties["prototype"] = PropertyDescriptor.data(
-            proto, 0,
+            proto,
             writable = true, enumerable = false, configurable = true
         )
         if(strict) {
@@ -136,7 +136,7 @@ class FunctionObject(
 
     object ThrowTypeObject: ObjectData() {
         override val className: String = "Function"
-        override val prototype: ObjectData? = FunctionPrototypeObject()
+        override val prototype: ObjectData = FunctionPrototypeObject()
         override val call: ((EcmaData,List<EcmaData>,GlobalObject) -> StackData) = lambda@ { thisValue, arguments, globalObj ->
 //            val compiler = ByteCompiler()
 //            compiler.runFunction(
@@ -154,7 +154,7 @@ class FunctionObject(
         //ThrowTypeError = F
         init {
             namedProperties["length"] = PropertyDescriptor.data(
-                NumberData.zeroP(), 0,
+                NumberData.zeroP(),
                 writable = false, enumerable = false, configurable = false
             )
         }
@@ -168,7 +168,7 @@ class FunctionPrototypeObject: ObjectData() {
 
     init {
         namedProperties["length"] = PropertyDescriptor.data(
-            NumberData.zeroP(), 0,
+            NumberData.zeroP(),
             writable = false, enumerable = false, configurable = false
         )
 //        namedProperties["toString"] = throw NotImplementedError("15.3.4.2")
@@ -187,12 +187,12 @@ class ArgumentsObject(
 ): ObjectData() {
     override val className: String = "Arguments"
     override val prototype: ObjectData = PrototypeObject()
-    var overrideMethods: Boolean = false
-    var map: ObjectData
+    private var overrideMethods: Boolean = false
+    private var map: ObjectData
     init {
         val len = args.size
         namedProperties["length"] = PropertyDescriptor.data(
-            NumberData.real(len), 0, writable = true,
+            NumberData.real(len), writable = true,
             enumerable = false, configurable = true
         )
         map = NormalObject()
@@ -203,7 +203,7 @@ class ArgumentsObject(
             defineOwnProperty(
                 TypeConverter.toString(value),
                 PropertyDescriptor.data(
-                    value, 0, writable = true,
+                    value, writable = true,
                     enumerable = true, configurable = true
                 ),
                 false
@@ -217,7 +217,7 @@ class ArgumentsObject(
                     map.defineOwnProperty(
                         TypeConverter.toString(NumberData.real(index)),
                         PropertyDescriptor.accessor(
-                            0, p, g,  configurable = true
+                            p, g,  configurable = true
                         ),
                         false
                     )
@@ -226,23 +226,20 @@ class ArgumentsObject(
             index--
         }
         overrideMethods = mappedNames.isNotEmpty()
-        if(mappedNames.isNotEmpty()) {
-            //get, getOwnProperty, defineOwnProperty, delete
-        }
         if(!strict) {
             namedProperties["callee"] = PropertyDescriptor.data(
-                func, 0, writable = true,
+                func, writable = true,
                 enumerable = false, configurable = true
             )
         }
         else {
             val thrower = FunctionObject.ThrowTypeObject
             namedProperties["caller"] = PropertyDescriptor.accessor(
-                0, thrower, thrower,
+                thrower, thrower,
                 enumerable = false, configurable = false
             )
             namedProperties["callee"] = PropertyDescriptor.accessor(
-                0, thrower, thrower,
+                thrower, thrower,
                 enumerable = false, configurable = false
             )
         }

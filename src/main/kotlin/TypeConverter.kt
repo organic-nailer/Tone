@@ -1,4 +1,3 @@
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import kotlin.math.abs
 
 object TypeConverter {
@@ -87,9 +86,9 @@ object TypeConverter {
         when(value) {
             is UndefinedData -> throw Exception("TypeError")
             is NullData -> throw Exception("TypeError")
-            is BooleanData -> throw NotImplementedException() //BooleanObject
-            is NumberData -> throw NotImplementedException() //NumberObject
-            is StringData -> throw NotImplementedException() //StringObject
+            is BooleanData -> throw NotImplementedError() //BooleanObject
+            is NumberData -> throw NotImplementedError() //NumberObject
+            is StringData -> throw NotImplementedError() //StringObject
             is ObjectData -> return value
             else -> throw Exception()
         }

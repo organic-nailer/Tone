@@ -1,6 +1,5 @@
 import TypeConverter.isCallable
 import TypeConverter.sameValue
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -203,7 +202,7 @@ open class ObjectData: EcmaData() {
         }
         val ownDesc = getOwnProperty(propertyName)
         if(ownDesc?.type == PropertyDescriptor.DescriptorType.Data) {
-            val valueDesc = PropertyDescriptor.data(value = value, address = ownDesc.address!!)
+            val valueDesc = PropertyDescriptor.data(value = value)
             defineOwnProperty(propertyName, valueDesc, throwFlag)
             return
         }
@@ -211,12 +210,12 @@ open class ObjectData: EcmaData() {
         if(desc?.type == PropertyDescriptor.DescriptorType.Accessor) {
             val setter = desc.set!!
             //return setter.[[Call]](this,value)
-            throw NotImplementedException()
+            throw NotImplementedError()
         }
         else {
             val newDesc = PropertyDescriptor.data(
-                value = value, writable = true, enumerable = true, configurable = true,
-                address = 0
+                value = value, writable = true,
+                enumerable = true, configurable = true
             )
             defineOwnProperty(propertyName, newDesc, throwFlag)
         }
@@ -255,13 +254,13 @@ open class ObjectData: EcmaData() {
         if(isCallable(toString ?: UndefinedData())) {
             //val str = toString.[[Call]]()
             //if(str is Primitive) return str
-            throw NotImplementedException()
+            throw NotImplementedError()
         }
         val valueOf = get("valueOf")
         if(isCallable(valueOf ?: UndefinedData())) {
             //val value = valueOf.[[Call]]()
             //if(value is Primitive) return value
-            throw NotImplementedException()
+            throw NotImplementedError()
         }
         throw Exception("TypeError") //TODO: TypeError
     }
@@ -270,13 +269,13 @@ open class ObjectData: EcmaData() {
         if(isCallable(valueOf ?: UndefinedData())) {
             //val value = valueOf.[[Call]]()
             //if(value is Primitive) return value
-            throw NotImplementedException()
+            throw NotImplementedError()
         }
         val toString = get("toString")
         if(isCallable(toString ?: UndefinedData())) {
             //val str = toString.[[Call]]()
             //if(str is Primitive) return str
-            throw NotImplementedException()
+            throw NotImplementedError()
         }
         throw Exception("TypeError") //TODO: TypeError
     }
@@ -317,7 +316,6 @@ open class ObjectData: EcmaData() {
             }
             if(current.type == PropertyDescriptor.DescriptorType.Data) {
                 namedProperties[propertyName] = PropertyDescriptor.accessor(
-                    address = 0,
                     configurable = current.configurable!!,
                     enumerable = current.enumerable!!
                 ) //TODO: これdescriptor反映させなくていいの？
@@ -325,7 +323,6 @@ open class ObjectData: EcmaData() {
             else {
                 namedProperties[propertyName] = PropertyDescriptor.data(
                     descriptor.value!!,
-                    address = 0,
                     configurable = current.configurable!!,
                     enumerable = current.enumerable!!
                 ) //TODO: これdescriptor反映させなくていいの？
@@ -360,7 +357,6 @@ open class ObjectData: EcmaData() {
         }
         namedProperties[propertyName] = PropertyDescriptor(
             type = current!!.type,
-            address = 0,
             value = descriptor.value ?: current.value,
             writable = descriptor.writable ?: current.writable,
             get = descriptor.get ?: current.get,
@@ -386,7 +382,6 @@ open class ObjectData: EcmaData() {
 
     data class PropertyDescriptor(
         val type: DescriptorType,
-        val address: Int?,
         val value: EcmaData? = null,
         val writable: Boolean? = null,
         val get: ObjectData? = null,
@@ -410,27 +405,23 @@ open class ObjectData: EcmaData() {
         companion object {
             fun data(
                 value: EcmaData,
-                address: Int,
                 writable: Boolean? = null,
                 enumerable: Boolean? = null,
                 configurable: Boolean? = null
             ) = PropertyDescriptor(
                 type = DescriptorType.Data,
-                address,
                 value, writable,
                 enumerable = enumerable,
                 configurable = configurable
             )
 
             fun accessor(
-                address: Int,
                 get: ObjectData? = null,
                 set: ObjectData? = null,
                 enumerable: Boolean? = null,
                 configurable: Boolean? = null
             ) = PropertyDescriptor(
                 type = DescriptorType.Accessor,
-                address = address,
                 get = get, set = set,
                 enumerable = enumerable,
                 configurable = configurable

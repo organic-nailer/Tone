@@ -4,7 +4,7 @@ import org.junit.Test
 
 class ToneTest {
 
-    lateinit var parser: Parser
+    private lateinit var parser: Parser
 
     @Before
     fun setup() {

@@ -9,7 +9,7 @@ class ParserTest {
 
     @Test
     fun parseNumber() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("35")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -20,7 +20,7 @@ class ParserTest {
 
     @Test
     fun parseAddition() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("33 + 4")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -31,7 +31,7 @@ class ParserTest {
 
     @Test
     fun parseMultiAddition() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("3 + 3 + 4")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -42,7 +42,7 @@ class ParserTest {
 
     @Test
     fun parseSub() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("33 - 4")
         val parsed = parser.parse(tokenizer.tokenized)
         assertEquals(
@@ -53,90 +53,90 @@ class ParserTest {
 
     @Test
     fun parseBinaryExpr() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("1 + 2 * 3 >> 4 & 5 != 6 > 7 instanceof 8")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseLogicExpr() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("1 + 2 && 3")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseUnary() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("+ 1 + 2 ++")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseNull() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("1 = null")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseBool() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("1 = new true")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseCall() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("1 ( 2 ) [ 3 ]")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseIdentifier() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("hello.world=334")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseArray() {
-        val parser: Parser = Parser()
-        var parsed = parser.parse(Tokenizer("[]").tokenized)
-        parsed = parser.parse(Tokenizer("[1]").tokenized)
-        parsed = parser.parse(Tokenizer("[1,]").tokenized)
-        parsed = parser.parse(Tokenizer("[,,1,]").tokenized)
-        parsed = parser.parse(Tokenizer("[,1,,2]").tokenized)
+        val parser = Parser()
+        parser.parse(Tokenizer("[]").tokenized)
+        parser.parse(Tokenizer("[1]").tokenized)
+        parser.parse(Tokenizer("[1,]").tokenized)
+        parser.parse(Tokenizer("[,,1,]").tokenized)
+        parser.parse(Tokenizer("[,1,,2]").tokenized)
         assert(true)
     }
 
     @Test
     fun parseProgram() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("x=2;y=3;")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun parseBlock() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val tokenizer = Tokenizer("{x=2;}")
-        val parsed = parser.parse(tokenizer.tokenized)
+        parser.parse(tokenizer.tokenized)
         assert(true)
     }
 
     @Test
     fun importFileTest() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("Hoge.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -158,7 +158,7 @@ class ParserTest {
 
     @Test
     fun expressionTest() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("ExpressionTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -169,7 +169,7 @@ class ParserTest {
         val jsonFile = (ParserTest::class.java).classLoader.getResource("ExpressionTestExpected.json") ?: kotlin.run {
             throw Exception("File not found")
         }
-        val element = Json.parseToJsonElement(File(jsonFile.toURI()).readText())
+        Json.parseToJsonElement(File(jsonFile.toURI()).readText())
         assertJson(
             File(jsonFile.toURI()).readText(),
             parsed
@@ -186,7 +186,7 @@ class ParserTest {
 
     @Test
     fun statementTest() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("StatementTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -205,7 +205,7 @@ class ParserTest {
 
     @Test
     fun functionTest() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("FunctionTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -224,7 +224,7 @@ class ParserTest {
 
     @Test
     fun literalTest() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("LiteralTest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -243,7 +243,7 @@ class ParserTest {
 
     @Test
     fun asiTest() {
-        val parser: Parser = Parser()
+        val parser = Parser()
         val file = (ParserTest::class.java).classLoader.getResource("ASITest.js") ?: kotlin.run {
             throw Exception("File not found")
         }
@@ -262,21 +262,15 @@ class ParserTest {
 
     @Test
     fun lr0Test() {
-        val parserGenerator = LR0ParserGenerator(
+        LR0ParserGenerator(
             EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
             EcmaGrammar.es5StartSymbol.ordinal
         )
-        //parserGenerator.printClosureMap()
-        //parserGenerator.printGotoMap()
-    }
-
-    fun String.tokenize(): List<String> {
-        return this.split(" ")
     }
 
     @Test
     fun generatorTest() {
-        val generator = DragonParserGenerator(
+        DragonParserGenerator(
             EcmaGrammar.grammarParserForLR0(EcmaGrammar.es5Grammar),
             EcmaGrammar.es5StartSymbol.ordinal
         )

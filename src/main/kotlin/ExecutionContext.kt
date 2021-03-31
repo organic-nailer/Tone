@@ -1,5 +1,3 @@
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
-
 class ExecutionContext(
     val lexicalEnvironment: Environment,
     val variableEnvironment: Environment,
@@ -70,7 +68,7 @@ class Environment {
 
 abstract class EnvironmentRecords {
     abstract fun hasBinding(identifier: String): Boolean
-    abstract fun createMutableBinding(identifier: String, deletable: Boolean)
+    abstract fun createMutableBinding(identifier: String, deletable: Boolean = false)
     abstract fun setMutableBinding(identifier: String, value: EcmaData, strict: Boolean)
     abstract fun getBindingValue(identifier: String, strict: Boolean): EcmaData
     abstract fun deleteBinding(identifier: String): Boolean
@@ -139,9 +137,9 @@ class DeclarativeEnvironmentRecords : EnvironmentRecords() {
 }
 
 class ObjectEnvironmentRecords(
-    val bindings: ObjectData
+    private val bindings: ObjectData
 ) : EnvironmentRecords() {
-    var provideThis: Boolean = false
+    private var provideThis: Boolean = false
     override fun hasBinding(identifier: String): Boolean {
         return bindings.hasProperty(identifier)
     }
@@ -150,7 +148,7 @@ class ObjectEnvironmentRecords(
         assert(!bindings.hasProperty(identifier))
         bindings.defineOwnProperty(identifier,
             ObjectData.PropertyDescriptor.data(
-                UndefinedData(), 0,
+                UndefinedData(),
                 writable = true, enumerable = true, deletable
             ),
             throwFlag = true
@@ -184,14 +182,14 @@ fun getIdentifierReference(lex: Environment?, name: String, strict: Boolean): Re
     if(lex == null) return ReferenceData(null, name, strict)
     val envRec = lex.records
     val exists = envRec.hasBinding(name)
-    if(exists) {
-        return ReferenceData(
+    return if(exists) {
+        ReferenceData(
             envRec, name, strict
         )
     }
     else {
         val outer = lex.outer
-        return getIdentifierReference(outer, name, strict)
+        getIdentifierReference(outer, name, strict)
     }
 }
 
@@ -249,7 +247,7 @@ fun declarationBindingInstantiation(
             val v = if(n < argCount) args[n] else UndefinedData()
             val argAlreadyDeclared = env.hasBinding(argName)
             if(!argAlreadyDeclared) {
-                env.createMutableBinding(argName, false) //TODO: deletable
+                env.createMutableBinding(argName)
             }
             env.setMutableBinding(argName, v, strict)
             n++
@@ -267,7 +265,7 @@ fun declarationBindingInstantiation(
             val existingProp = go.getProperty(fn)
             if(existingProp?.configurable == true) {
                 go.defineOwnProperty(fn, ObjectData.PropertyDescriptor.data(
-                    value = UndefinedData(), writable = true, address = 0,
+                    value = UndefinedData(), writable = true,
                     enumerable = true, configurable = configurableBindings
                 ), throwFlag = true)
             }
@@ -288,7 +286,7 @@ fun declarationBindingInstantiation(
             env.initializeImmutableBinding("arguments", argsObj)
         }
         else {
-            env.createMutableBinding("arguments", false) //TODO deletable
+            env.createMutableBinding("arguments")
             env.setMutableBinding("arguments", argsObj, false)
         }
     }

@@ -320,7 +320,7 @@ class ByteCompiler {
                         it.label == label
                             || it.type == NodeType.FunctionDeclaration
                             || it.type == NodeType.FunctionExpression
-                    } ?: throw Exception("SyntaxError")
+                    }
                     if(scopeIndex < 0) throw Exception("SyntaxError")
                     val scope = scopeStack[scopeIndex]
                     if(scope.type == NodeType.FunctionExpression
@@ -522,9 +522,8 @@ class ByteCompiler {
                     byteLines.add(ByteOperation(OpCode.Assign))
                 }
                 else {
-                    //TODO: leftを2回評価する形になるので問題か？
                     compile(node.left!!)
-                    compile(node.left)
+                    byteLines.add(ByteOperation(OpCode.Copy))
                     compile(node.right!!)
                     val code = when(node.operator) {
                         "+=" -> OpCode.Add

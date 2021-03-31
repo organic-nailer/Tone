@@ -8,7 +8,6 @@ class DragonParserGenerator(
     private val startSymbol: Int) {
     private val lr0ParserGenerator = LR0ParserGenerator(rules, startSymbol)
     private val firstMap = mutableMapOf<Int, MutableSet<Int>>()
-    //val gotoMap = mutableMapOf<Pair<String, String>, String>() //state to token, nextState
     private val closureMap = mutableMapOf<Set<LALR1ProductionRuleData>, String>() //rules, state
 
     val transitionMap = mutableMapOf<Pair<String, Int>, TransitionData>()

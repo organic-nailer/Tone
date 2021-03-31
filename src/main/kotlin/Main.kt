@@ -3,10 +3,10 @@ fun main(args: Array<String>) {
         println("引数のサイズが一致しません")
         return
     }
-    val parser: Parser = Parser()
+    val parser = Parser()
     val tokenizer = Tokenizer(args.first())
-    val parsed = parser.parse(tokenizer.tokenized)
-    val node = parser.parsedNode ?: kotlin.run {
+    parser.parse(tokenizer.tokenized)
+    val node = parser.parsedNode ?: run {
         println("パースに失敗しました")
         return
     }
