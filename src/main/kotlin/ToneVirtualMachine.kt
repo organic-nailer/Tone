@@ -1,20 +1,24 @@
+import TypeConverter.checkObjectCoercible
 import TypeConverter.isCallable
 import TypeConverter.toBoolean
 import TypeConverter.toInt32
 import TypeConverter.toNumber
 import TypeConverter.toObject
 import TypeConverter.toPrimitive
+import TypeConverter.toString
 import TypeConverter.toUInt32
 
 class ToneVirtualMachine {
-    var referencePool: List<ReferenceData?>? = null
+    private val referencePool = mutableListOf<ReferenceData?>()
+    private val constantPool = mutableListOf<EcmaPrimitive>()
     var globalObjectData: GlobalObject? = null
     fun run(
         code: List<ByteCompiler.ByteOperation>,
         refPool: List<ReferenceData?>,
         global: GlobalObject
     ): StackData? {
-        referencePool = refPool
+        referencePool.clear()
+        referencePool.addAll(refPool)
         globalObjectData = global
         val mainStack = ArrayDeque<StackData>()
         var counter = 0
@@ -299,6 +303,22 @@ class ToneVirtualMachine {
                 ByteCompiler.OpCode.Return -> {
                     return mainStack.first()
                 }
+                ByteCompiler.OpCode.ResolveMember -> {
+                    val propertyNameReference = mainStack.removeFirst()
+                    val baseReference = mainStack.removeFirst()
+                    val baseValue = getValue(baseReference)
+                    val propertyNameValue = getValue(propertyNameReference)
+                    checkObjectCoercible(baseValue)
+                    val propertyNameString = toString(propertyNameValue)
+                    val strict = false //TODO: strict
+                    val index = referencePool.size
+                    referencePool.add(ReferenceData(
+                        base = baseValue,
+                        referencedName = propertyNameString,
+                        strict
+                    ))
+                    mainStack.addFirst(ReferenceStackData(index))
+                }
             }
             counter++
         }
@@ -310,6 +330,7 @@ class ToneVirtualMachine {
     }
 
     private fun operandToData(operand: String?): StackData {
+        if(operand == null) throw Exception()
         if(operand == "null") {
             return NullStackData()
         }
@@ -325,12 +346,17 @@ class ToneVirtualMachine {
         if(operand == "empty") {
             return EmptyStackData()
         }
-        if(operand?.startsWith("#") == true) {
+        if(operand.startsWith("#")) {
             operand.substring(1).toIntOrNull()?.let {
                 return ReferenceStackData(it)
             }
         }
-        operand?.toIntOrNull()?.let {
+        if(operand.startsWith("@")) {
+            operand.substring(1).toIntOrNull()?.let {
+                return constantPool[it].toData().toStack()
+            }
+        }
+        operand.toIntOrNull()?.let {
             return NumberStackData(NumberData.NumberKind.Real, it)
         }
         throw NotImplementedError()
@@ -346,7 +372,7 @@ class ToneVirtualMachine {
             is ObjectStackData -> throw NotImplementedError()
             is ReferenceStackData -> {
                 //println("getValue(ref=$value)")
-                val data = referencePool?.get(value.address) ?: throw Exception()
+                val data = referencePool[value.address] ?: throw Exception()
                 //println("data=$data")
                 val base = data.base
                 if(data.isUnresolvableReference()) throw Exception("ReferenceError")

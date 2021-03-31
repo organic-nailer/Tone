@@ -432,10 +432,22 @@ open class ObjectData: EcmaData() {
 
 
 
-interface EcmaPrimitive
+interface EcmaPrimitive {
+    fun toData(): EcmaData
+}
 
-class UndefinedPrimitive: EcmaPrimitive
-class NullPrimitive: EcmaPrimitive
-data class BooleanPrimitive(val value: Boolean): EcmaPrimitive
-data class NumberPrimitive(val value: Int): EcmaPrimitive
-data class StringPrimitive(val value: String): EcmaPrimitive
+class UndefinedPrimitive: EcmaPrimitive {
+    override fun toData() = UndefinedData()
+}
+class NullPrimitive: EcmaPrimitive {
+    override fun toData(): EcmaData = NullData()
+}
+data class BooleanPrimitive(val value: Boolean): EcmaPrimitive {
+    override fun toData(): EcmaData = BooleanData(value)
+}
+data class NumberPrimitive(val value: Int): EcmaPrimitive {
+    override fun toData(): EcmaData = NumberData.real(value)
+}
+data class StringPrimitive(val value: String): EcmaPrimitive {
+    override fun toData(): EcmaData = StringData(value)
+}

@@ -94,6 +94,11 @@ object TypeConverter {
         }
     }
 
+    fun checkObjectCoercible(value: EcmaData) {
+        if(value is UndefinedData || value is NullData) throw Exception("TypeError")
+        return
+    }
+
     fun isCallable(value: EcmaData): Boolean {
         if(value !is ObjectData) return false
         return value.call != null

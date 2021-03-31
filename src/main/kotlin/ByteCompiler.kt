@@ -7,6 +7,7 @@ class ByteCompiler {
     private val contextStack = ArrayDeque<ExecutionContext>()
     private val scopeStack = ArrayDeque<ScopeData>()
     val refPool = mutableListOf<ReferenceData>()
+    val constantPool = mutableListOf<EcmaPrimitive>()
     var globalObject: GlobalObject? = null
 
     fun runGlobal(code: Node, global: GlobalObject) {
@@ -563,6 +564,18 @@ class ByteCompiler {
                 }
                 throw NotImplementedError()
             }
+            NodeType.MemberExpression -> {
+                if(node.computed!!) { //object[property]
+                    compile(node.`object`!!)
+                    compile(node.property!!)
+                    writeOp(OpCode.ResolveMember)
+                }
+                else { //object.property
+                    compile(node.`object`!!)
+                    writeOp(OpCode.Push, useConst(StringPrimitive(node.property!!.name!!)))
+                    writeOp(OpCode.ResolveMember)
+                }
+            }
             NodeType.Identifier -> {
                 val identifier = node.name!!
                 val resolved = contextStack.first()
@@ -590,6 +603,10 @@ class ByteCompiler {
     }
     private fun getUniqueLabel(): String {
         return "L${uniqueLabelIndex++}"
+    }
+    private fun useConst(value: EcmaPrimitive): String {
+        constantPool.add(value)
+        return "@${constantPool.size-1}"
     }
 
     private fun replaceLabel() {
@@ -621,7 +638,7 @@ class ByteCompiler {
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
         GetValue, IfEmpty, Swap, Assign, Copy, Call,
-        Return
+        Return, ResolveMember
     }
 
     data class ScopeData(
