@@ -412,6 +412,10 @@ class ByteCompiler {
                 }
                 writeOp(OpCode.Return)
             }
+            NodeType.DebuggerStatement -> {
+                //TODO: debug
+                writeOp(OpCode.Push, "empty")
+            }
             NodeType.VariableDeclaration -> {
                 node.declarations!!.forEach { declaration ->
                     if(declaration.init != null) {
