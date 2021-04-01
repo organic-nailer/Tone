@@ -382,6 +382,20 @@ class ToneVirtualMachine {
                     }
                     obj.defineOwnProperty(name, desc, false)
                 }
+                ByteCompiler.OpCode.New -> {
+                    val argSize = (operandToData(operation.operand) as NumberStackData).value
+                    val arguments = mutableListOf<EcmaData>()
+                    for(i in 0 until argSize) {
+                        val argRef = mainStack.removeFirst()
+                        val value = getValue(argRef)
+                        arguments.add(0, value)
+                    }
+                    val ref = mainStack.removeFirst()
+                    val constructor = getValue(ref)
+                    if(constructor !is ObjectData) throw Exception("TypeError")
+                    if(constructor.construct == null) throw Exception("TypeError")
+                    return constructor.construct!!.invoke(arguments).toStack()
+                }
             }
             counter++
         }

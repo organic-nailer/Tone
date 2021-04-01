@@ -367,7 +367,7 @@ open class ObjectData: EcmaData() {
     }
 
     open val primitiveValue: EcmaPrimitive? = null
-    open val construct: ((List<Any>) -> ObjectData)? = null
+    open val construct: ((List<EcmaData>) -> ObjectData)? = null
     open val call: ((EcmaData,List<EcmaData>) -> StackData)? = null
     open val hasInstance: ((Any) -> Boolean)? = null
     open val scope: Environment? = null

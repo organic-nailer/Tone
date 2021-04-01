@@ -564,6 +564,13 @@ class ByteCompiler {
                     writeOp(OpCode.ResolveMember)
                 }
             }
+            NodeType.NewExpression -> {
+                compile(node.callee!!)
+                node.arguments?.forEach {
+                    compile(it)
+                }
+                writeOp(OpCode.New, (node.arguments?.size ?: 0).toString())
+            }
             NodeType.ThisExpression -> {
                 writeOp(OpCode.Push, useObject(contextStack.first().thisBinding))
             }
@@ -696,7 +703,7 @@ class ByteCompiler {
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
         GetValue, IfEmpty, Swap, Assign, Copy, Call,
-        Return, ResolveMember, Define
+        Return, ResolveMember, Define, New
     }
 
     data class ScopeData(
