@@ -345,3 +345,191 @@ class ArgumentsObject(
         }
     }
 }
+
+class ArrayObject: ObjectData() {
+    val isSparse: Boolean
+        get() {
+            val len = get("length")!!
+            for(i in 0 until TypeConverter.toUInt32(len)) {
+                val elem = getOwnProperty(TypeConverter.toString(NumberData.real(i))) ?: return true
+            }
+            return false
+        }
+
+    override val prototype: ObjectData = ArrayPrototypeObject()
+    override val className: String = "Array"
+    override val extensible: Boolean = true
+    override fun defineOwnProperty(propertyName: String, descriptor: PropertyDescriptor, throwFlag: Boolean): Boolean {
+        var oldLenDesc = getOwnProperty("length")!!
+        var oldLen = (oldLenDesc.value as NumberData).value
+        if(propertyName == "length") {
+            if(descriptor.value == null) {
+                return super.defineOwnProperty("length", descriptor, throwFlag)
+            }
+            val newLen = TypeConverter.toUInt32(descriptor.value)
+            if(newLen != TypeConverter.toNumber(descriptor.value).value) throw Exception("RangeError")
+            var newLenDesc = descriptor.copy(value = NumberData.real(newLen))
+            if(newLen >= oldLen) {
+                return super.defineOwnProperty("length", newLenDesc, throwFlag)
+            }
+            if(oldLenDesc.writable == false) {
+                if(throwFlag) throw Exception("TypeError")
+                return false
+            }
+            val newWritable = if(newLenDesc.writable == null || newLenDesc.writable == true) {
+                true
+            }
+            else {
+                newLenDesc = newLenDesc.copy(writable = true)
+                false
+            }
+            val succeeded = super.defineOwnProperty(
+                "length", newLenDesc, throwFlag
+            )
+            if(!succeeded) return false
+            while(newLen < oldLen) {
+                oldLen--
+                val deleteSucceeded = delete(
+                    TypeConverter.toString(NumberData.real(oldLen)),
+                    false
+                )
+                if(!deleteSucceeded) {
+                    newLenDesc = newLenDesc.copy(value = NumberData.real(oldLen+1))
+                    if(!newWritable) {
+                        newLenDesc = newLenDesc.copy(writable = false)
+                    }
+                    super.defineOwnProperty("length", newLenDesc, false)
+                    if(throwFlag) throw Exception("TypeError")
+                    return false
+                }
+            }
+            if(!newWritable) {
+                super.defineOwnProperty("length",
+                    PropertyDescriptor(writable = false, type = PropertyDescriptor.DescriptorType.Data),
+                    false
+                )
+                return true
+            }
+            return true
+        }
+        val p = propertyName.toIntOrNull()
+        if(p != null) { //TODO: if P is an array index
+            val index = TypeConverter.toUInt32(StringData(propertyName))
+            if(index >= oldLen && oldLenDesc.writable == false) {
+                if(throwFlag) throw Exception("TypeError")
+                return false
+            }
+            val succeeded = super.defineOwnProperty(propertyName, descriptor, false)
+            if(index >= oldLen) {
+                oldLenDesc = oldLenDesc.copy(value = NumberData.real(index+1))
+                super.defineOwnProperty("length", oldLenDesc, false)
+            }
+            return true
+        }
+        return super.defineOwnProperty(propertyName, descriptor, throwFlag)
+    }
+
+    init {
+        namedProperties["prototype"] = PropertyDescriptor.data(
+            prototype, writable = false,
+            enumerable = false, configurable = false
+        )
+        //isArray(arg)
+        namedProperties["length"] = PropertyDescriptor.data(
+            NumberData.zeroP(),
+            writable = true, enumerable = false, configurable = false
+        )
+    }
+}
+
+class ArrayPrototypeObject: ObjectData() {
+    override val prototype: ObjectData = PrototypeObject()
+    override val className: String = "Array"
+    override val extensible: Boolean = true
+
+    init {
+        namedProperties["length"] = PropertyDescriptor.data(
+            NumberData.zeroP(),
+            writable = false, enumerable = false, configurable = false
+        )
+//        namedProperties["toString"] = throw NotImplementedError("15.4.4.2")
+//        namedProperties["toLocaleString"] = throw NotImplementedError("15.4.4.3")
+//        namedProperties["concat"] = throw NotImplementedError("15.4.4.4")
+//        namedProperties["join"] = throw NotImplementedError("15.4.4.5")
+//        namedProperties["pop"] = throw NotImplementedError("15.4.4.6")
+//        namedProperties["push"] = throw NotImplementedError("15.4.4.7")
+//        namedProperties["reverse"] = throw NotImplementedError("15.4.4.8")
+        //shift slice sort splice unshift indexOf lastIndexOf every some forEach map
+    // filter reduce reduceRight
+    }
+
+    override fun defineOwnProperty(propertyName: String, descriptor: PropertyDescriptor, throwFlag: Boolean): Boolean {
+        var oldLenDesc = getOwnProperty("length")!!
+        var oldLen = (oldLenDesc.value as NumberData).value
+        if(propertyName == "length") {
+            if(descriptor.value == null) {
+                return super.defineOwnProperty("length", descriptor, throwFlag)
+            }
+            val newLen = TypeConverter.toUInt32(descriptor.value)
+            if(newLen != TypeConverter.toNumber(descriptor.value).value) throw Exception("RangeError")
+            var newLenDesc = descriptor.copy(value = NumberData.real(newLen))
+            if(newLen >= oldLen) {
+                return super.defineOwnProperty("length", newLenDesc, throwFlag)
+            }
+            if(oldLenDesc.writable == false) {
+                if(throwFlag) throw Exception("TypeError")
+                return false
+            }
+            val newWritable = if(newLenDesc.writable == null || newLenDesc.writable == true) {
+                true
+            }
+            else {
+                newLenDesc = newLenDesc.copy(writable = true)
+                false
+            }
+            val succeeded = super.defineOwnProperty(
+                "length", newLenDesc, throwFlag
+            )
+            if(!succeeded) return false
+            while(newLen < oldLen) {
+                oldLen--
+                val deleteSucceeded = delete(
+                    TypeConverter.toString(NumberData.real(oldLen)),
+                    false
+                )
+                if(!deleteSucceeded) {
+                    newLenDesc = newLenDesc.copy(value = NumberData.real(oldLen+1))
+                    if(!newWritable) {
+                        newLenDesc = newLenDesc.copy(writable = false)
+                    }
+                    super.defineOwnProperty("length", newLenDesc, false)
+                    if(throwFlag) throw Exception("TypeError")
+                    return false
+                }
+            }
+            if(!newWritable) {
+                super.defineOwnProperty("length",
+                    PropertyDescriptor(writable = false, type = PropertyDescriptor.DescriptorType.Data),
+                    false
+                )
+                return true
+            }
+            return true
+        }
+        val p = propertyName.toIntOrNull()
+        if(p != null) { //TODO: if P is an array index
+            val index = TypeConverter.toUInt32(StringData(propertyName))
+            if(index >= oldLen && oldLenDesc.writable == false) {
+                if(throwFlag) throw Exception("TypeError")
+                return false
+            }
+            val succeeded = super.defineOwnProperty(propertyName, descriptor, false)
+            if(index >= oldLen) {
+                oldLenDesc = oldLenDesc.copy(value = NumberData.real(index+1))
+                super.defineOwnProperty("length", oldLenDesc, false)
+            }
+            return true
+        }
+        return super.defineOwnProperty(propertyName, descriptor, throwFlag)
+    }
+}

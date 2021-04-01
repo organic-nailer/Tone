@@ -569,12 +569,8 @@ class ByteCompiler {
             }
             NodeType.ObjectExpression -> {
                 val obj = NormalObject()
-                if(node.properties!!.isNullOrEmpty()) {
-                    writeOp(OpCode.Push, useObject(obj))
-                    return
-                }
                 writeOp(OpCode.Push, useObject(obj))
-                node.properties.forEach { property ->
+                node.properties?.forEach { property ->
                     if(property.key!!.type == NodeType.Literal) { //TODO: 正しいtoString
                         writeOp(OpCode.Push, useConst(StringPrimitive(property.key.value!!)))
                     }
@@ -604,6 +600,20 @@ class ByteCompiler {
                         writeOp(OpCode.Push, useObject(closure))
                         writeOp(OpCode.Define, "set")
                     }
+                }
+            }
+            NodeType.ArrayExpression -> {
+                val obj = ArrayObject()
+                writeOp(OpCode.Push, useObject(obj))
+                node.elements ?: return
+                node.elements.forEachIndexed { index, element ->
+                    writeOp(OpCode.Push, "$index")
+                    element?.let {
+                        compile(it)
+                    } ?: kotlin.run {
+                        writeOp(OpCode.Push, "undefined")
+                    }
+                    writeOp(OpCode.Define, "init")
                 }
             }
             NodeType.Literal -> {

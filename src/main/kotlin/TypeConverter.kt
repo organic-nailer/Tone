@@ -14,7 +14,12 @@ object TypeConverter {
                 else NumberData(NumberData.NumberKind.ZeroP, 0)
             }
             is NumberData -> value
-            is StringData -> throw NotImplementedError()
+            is StringData -> {
+                //TODO: 正確な
+                value.value.toIntOrNull()?.let {
+                    NumberData.real(it)
+                }?: NumberData.naN()
+            }
             is ObjectData -> throw NotImplementedError()
             else -> throw Exception()
         }

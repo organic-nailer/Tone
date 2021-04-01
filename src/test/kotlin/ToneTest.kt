@@ -275,4 +275,18 @@ class ToneTest {
         println("\nresult=$result")
         Assert.assertEquals(9, (result as? NumberStackData)?.value)
     }
+
+    @Test
+    fun arrayLiteralTest() {
+        val code = """
+            var x = [0,1,,2];
+            x[1] = 3;
+            x[0] + x[1] + x.length;
+        """.trimIndent()
+        val result = run(code)
+        println("\ncode=")
+        println(code)
+        println("\nresult=$result")
+        Assert.assertEquals(7, (result as? NumberStackData)?.value)
+    }
 }
