@@ -1266,7 +1266,7 @@ class Parser {
                             start = this.start ?: Position(-1,-1),
                             end = this.end ?: Position(-1,-1)
                         ),
-                        value = this.value?.toIntOrNull()?.toString(),
+                        value = this.value!!.toString(),
                         raw = this.value
                     )
                 }
@@ -1277,7 +1277,7 @@ class Parser {
                             start = this.start ?: Position(-1,-1),
                             end = this.end ?: Position(-1,-1)
                         ),
-                        value = this.value,
+                        value = this.value?.toIntOrNull()?.toString(),
                         raw = this.value
                     )
                 }

@@ -13,6 +13,7 @@ class ToneTest {
 
     private fun run(code: String): StackData? {
         val tokenizer = Tokenizer(code)
+        println(tokenizer.tokenized)
         parser.parse(tokenizer.tokenized)
         val node = parser.parsedNode ?: kotlin.run {
             return null
@@ -28,6 +29,8 @@ class ToneTest {
         val vm = ToneVirtualMachine()
         return vm.run(compiler.byteLines,
             compiler.refPool,
+            compiler.constantPool,
+            compiler.objectPool,
             compiler.globalObject!!
         )
     }
@@ -247,5 +250,29 @@ class ToneTest {
         println(code)
         println("\nresult=$result")
         Assert.assertEquals(3, (result as? NumberStackData)?.value)
+    }
+
+    @Test
+    fun objectLiteralTest() {
+        val code = """
+            var x = {
+                p1: 1+2,
+                'p2': 3,
+                set p3(a) {
+                    this.p1 = a;
+                },
+                get p3() {
+                    return this.p2;
+                }
+            };
+            var y = x.p1 + x.p2;
+            x.p3 = 0;
+            y + x.p1 + x.p3;
+        """.trimIndent()
+        val result = run(code)
+        println("\ncode=")
+        println(code)
+        println("\nresult=$result")
+        Assert.assertEquals(9, (result as? NumberStackData)?.value)
     }
 }

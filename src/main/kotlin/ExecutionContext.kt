@@ -5,7 +5,7 @@ class ExecutionContext(
 ) {
     companion object {
         fun global(globalObj: GlobalObject, code: Parser.Node, strict: Boolean): ExecutionContext {
-            val globalEnvironment = newObjectEnvironment(globalObj, null)
+            val globalEnvironment = newObjectEnvironment(globalObj, null, globalObj)
             val context =  ExecutionContext(
                 globalEnvironment,
                 globalEnvironment,
@@ -39,7 +39,7 @@ class ExecutionContext(
             } else {
                 thisArg
             }
-            val localEnv = newDeclarativeEnvironment(f.scope)
+            val localEnv = newDeclarativeEnvironment(f.scope, globalObject)
             val context = ExecutionContext(
                 thisBinding = thisBinding as ObjectData, //TODO 角煮
                 lexicalEnvironment = localEnv,
@@ -75,7 +75,9 @@ abstract class EnvironmentRecords {
     abstract fun implicitThisValue(): EcmaData
 }
 
-class DeclarativeEnvironmentRecords : EnvironmentRecords() {
+class DeclarativeEnvironmentRecords(
+    private val globalObj: GlobalObject
+) : EnvironmentRecords() {
     data class RecordData(
         val value: EcmaData?,
         val mutable: Boolean,
@@ -137,7 +139,8 @@ class DeclarativeEnvironmentRecords : EnvironmentRecords() {
 }
 
 class ObjectEnvironmentRecords(
-    private val bindings: ObjectData
+    private val bindings: ObjectData,
+    private val globalObj: GlobalObject
 ) : EnvironmentRecords() {
     private var provideThis: Boolean = false
     override fun hasBinding(identifier: String): Boolean {
@@ -211,17 +214,17 @@ data class ReferenceData(
     }
 }
 
-fun newDeclarativeEnvironment(outer: Environment?): Environment {
+fun newDeclarativeEnvironment(outer: Environment?, globalObj: GlobalObject): Environment {
     val env = Environment()
-    val envRec = DeclarativeEnvironmentRecords()
+    val envRec = DeclarativeEnvironmentRecords(globalObj)
     env.records = envRec
     env.outer = outer
     return env
 }
 
-fun newObjectEnvironment(obj: ObjectData, outer: Environment?): Environment {
+fun newObjectEnvironment(obj: ObjectData, outer: Environment?, globalObj: GlobalObject): Environment {
     val env = Environment()
-    val envRec = ObjectEnvironmentRecords(obj)
+    val envRec = ObjectEnvironmentRecords(obj, globalObj)
     env.records = envRec
     env.outer = outer
     return env
@@ -255,7 +258,11 @@ fun declarationBindingInstantiation(
     }
     code.body?.filter { it.type == Parser.NodeType.FunctionDeclaration }?.forEach { f ->
         val fn = f.id!!.name!!
-        val fo = FunctionObject(f.params!!.map { it.name!! }, f.bodySingle!!, variableEnvironment, false) //TODO: strict
+        val fo = FunctionObject(
+            f.params!!.map { it.name!! },
+            f.bodySingle!!,
+            variableEnvironment, false,
+            globalObj) //TODO: strict
         val funcAlreadyDeclared = env.hasBinding(fn)
         if(!funcAlreadyDeclared) {
             env.createMutableBinding(fn, configurableBindings)
@@ -279,7 +286,7 @@ fun declarationBindingInstantiation(
     val argumentsAlreadyDeclared = env.hasBinding("arguments")
     if(mode == ContextMode.Function && !argumentsAlreadyDeclared) {
         val names = func!!.formalParameters ?: listOf()
-        val argsObj = ArgumentsObject(func, names, args!!, variableEnvironment, strict)
+        val argsObj = ArgumentsObject(func, names, args!!, variableEnvironment, strict, globalObj)
         if(strict) {
             env as DeclarativeEnvironmentRecords
             env.createImmutableBinding("arguments")

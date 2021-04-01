@@ -416,7 +416,7 @@ object EcmaGrammar {
         ">>>=","|=","^=","&="
     )
     val keywords = listOf(
-        "this","in","instanceof","typeof","void","delete","new","var",
+        "in","instanceof","typeof","void","delete","new","var",
         "if","else","while","for","continue","break","return",
         "with","switch","case","default","throw",
         "try","catch","finally","debugger","function","get","set","do"

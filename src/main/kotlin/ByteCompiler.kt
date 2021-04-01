@@ -8,6 +8,7 @@ class ByteCompiler {
     private val scopeStack = ArrayDeque<ScopeData>()
     val refPool = mutableListOf<ReferenceData>()
     val constantPool = mutableListOf<EcmaPrimitive>()
+    val objectPool = mutableListOf<ObjectData>()
     var globalObject: GlobalObject? = null
 
     fun runGlobal(code: Node, global: GlobalObject) {
@@ -551,19 +552,6 @@ class ByteCompiler {
                 }
                 writeOp(OpCode.Call, node.arguments.size.toString())
             }
-            NodeType.Literal -> {
-                if(node.raw == "null"
-                    || node.raw == "true"
-                    || node.raw == "false") {
-                    writeOp(OpCode.Push, node.raw)
-                    return
-                }
-                node.value?.toIntOrNull()?.let {
-                    writeOp(OpCode.Push, it.toString())
-                    return
-                }
-                throw NotImplementedError()
-            }
             NodeType.MemberExpression -> {
                 if(node.computed!!) { //object[property]
                     compile(node.`object`!!)
@@ -575,6 +563,62 @@ class ByteCompiler {
                     writeOp(OpCode.Push, useConst(StringPrimitive(node.property!!.name!!)))
                     writeOp(OpCode.ResolveMember)
                 }
+            }
+            NodeType.ThisExpression -> {
+                writeOp(OpCode.Push, useObject(contextStack.first().thisBinding))
+            }
+            NodeType.ObjectExpression -> {
+                val obj = NormalObject()
+                if(node.properties!!.isNullOrEmpty()) {
+                    writeOp(OpCode.Push, useObject(obj))
+                    return
+                }
+                writeOp(OpCode.Push, useObject(obj))
+                node.properties.forEach { property ->
+                    if(property.key!!.type == NodeType.Literal) { //TODO: 正しいtoString
+                        writeOp(OpCode.Push, useConst(StringPrimitive(property.key.value!!)))
+                    }
+                    else if(property.key.type == NodeType.Identifier) {
+                        writeOp(OpCode.Push, useConst(StringPrimitive(property.key.name!!)))
+                    }
+                    else throw Exception()
+
+                    if(property.kind!! == "init") {
+                        compile(property.valueNode!!)
+                        writeOp(OpCode.Define, "init")
+                    }
+                    else if(property.kind == "get") {
+                        val closure = FunctionObject(listOf(),
+                            property.valueNode!!.bodySingle!!,
+                            contextStack.first().lexicalEnvironment,
+                            false, globalObject!!) //TODO: strict
+                        writeOp(OpCode.Push, useObject(closure))
+                        writeOp(OpCode.Define, "get")
+                    }
+                    else if(property.kind == "set") {
+                        val closure = FunctionObject(
+                            property.valueNode!!.params!!.map { it.name!! },
+                            property.valueNode.bodySingle!!,
+                            contextStack.first().lexicalEnvironment,
+                            false, globalObject!!) //TODO: strict
+                        writeOp(OpCode.Push, useObject(closure))
+                        writeOp(OpCode.Define, "set")
+                    }
+                }
+            }
+            NodeType.Literal -> {
+                if(node.raw == "null"
+                    || node.raw == "true"
+                    || node.raw == "false") {
+                    writeOp(OpCode.Push, node.raw)
+                    return
+                }
+                node.value?.toIntOrNull()?.let {
+                    writeOp(OpCode.Push, it.toString())
+                    return
+                }
+                //TODO: RegExp
+                writeOp(OpCode.Push, useConst(StringPrimitive(node.value!!)))
             }
             NodeType.Identifier -> {
                 val identifier = node.name!!
@@ -608,6 +652,10 @@ class ByteCompiler {
         constantPool.add(value)
         return "@${constantPool.size-1}"
     }
+    private fun useObject(value: ObjectData): String {
+        objectPool.add(value)
+        return "&${objectPool.size-1}"
+    }
 
     private fun replaceLabel() {
         println("labels")
@@ -638,7 +686,7 @@ class ByteCompiler {
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
         GetValue, IfEmpty, Swap, Assign, Copy, Call,
-        Return, ResolveMember
+        Return, ResolveMember, Define
     }
 
     data class ScopeData(

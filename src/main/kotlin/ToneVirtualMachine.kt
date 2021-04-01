@@ -11,14 +11,21 @@ import TypeConverter.toUInt32
 class ToneVirtualMachine {
     private val referencePool = mutableListOf<ReferenceData?>()
     private val constantPool = mutableListOf<EcmaPrimitive>()
+    private val objectPool = mutableListOf<ObjectData>()
     var globalObjectData: GlobalObject? = null
     fun run(
         code: List<ByteCompiler.ByteOperation>,
         refPool: List<ReferenceData?>,
+        constPool: List<EcmaPrimitive>,
+        objPool: List<ObjectData>,
         global: GlobalObject
     ): StackData? {
         referencePool.clear()
         referencePool.addAll(refPool)
+        constantPool.clear()
+        constantPool.addAll(constPool)
+        objectPool.clear()
+        objectPool.addAll(objPool)
         globalObjectData = global
         val mainStack = ArrayDeque<StackData>()
         var counter = 0
@@ -298,10 +305,11 @@ class ToneVirtualMachine {
                     else {
                         thisValue = UndefinedData()
                     }
-                    return func.call!!.invoke(thisValue, arguments, global)
+                    return func.call!!.invoke(thisValue, arguments)
                 }
                 ByteCompiler.OpCode.Return -> {
-                    return mainStack.first()
+                    val ref = mainStack.removeFirst()
+                    return getValue(ref).toStack()
                 }
                 ByteCompiler.OpCode.ResolveMember -> {
                     val propertyNameReference = mainStack.removeFirst()
@@ -318,6 +326,61 @@ class ToneVirtualMachine {
                         strict
                     ))
                     mainStack.addFirst(ReferenceStackData(index))
+                }
+                ByteCompiler.OpCode.Define -> {
+                    val desc: ObjectData.PropertyDescriptor
+                    val name: String
+                    when(operation.operand) {
+                        "init" -> {
+                            val exprValue = mainStack.removeFirst()
+                            val propName = mainStack.removeFirst()
+                            name = toString(getValue(propName))
+                            val propValue = getValue(exprValue)
+                            desc = ObjectData.PropertyDescriptor.data(
+                                propValue, writable = true,
+                                enumerable = true, configurable = true
+                            )
+                        }
+                        "get" -> {
+                            val closure = mainStack.removeFirst()
+                            val closureObj = getValue(closure) as ObjectData
+                            val propName = mainStack.removeFirst()
+                            name = toString(getValue(propName))
+                            desc = ObjectData.PropertyDescriptor.accessor(
+                                get = closureObj, enumerable = true, configurable = true
+                            )
+                        }
+                        "set" -> {
+                            val closure = mainStack.removeFirst()
+                            val closureObj = getValue(closure) as ObjectData
+                            val propName = mainStack.removeFirst()
+                            name = toString(getValue(propName))
+                            desc = ObjectData.PropertyDescriptor.accessor(
+                                set = closureObj, enumerable = true, configurable = true
+                            )
+                        }
+                        else -> throw Exception()
+                    }
+                    val obj = getValue(mainStack.first())
+                    val previous = (obj as ObjectData).getOwnProperty(name)
+                    if(previous != null) {
+                        val strict = false
+                        if(
+                            (strict && desc.type == ObjectData.PropertyDescriptor.DescriptorType.Data)
+                            || (previous.type == ObjectData.PropertyDescriptor.DescriptorType.Data
+                                && desc.type == ObjectData.PropertyDescriptor.DescriptorType.Accessor)
+                            || (previous.type == ObjectData.PropertyDescriptor.DescriptorType.Accessor
+                                && desc.type == ObjectData.PropertyDescriptor.DescriptorType.Data)
+                            || (previous.type == ObjectData.PropertyDescriptor.DescriptorType.Accessor
+                                && desc.type == ObjectData.PropertyDescriptor.DescriptorType.Accessor
+                                && ((previous.get != null && desc.get != null)
+                                || (previous.set != null && desc.set != null))
+                                )
+                        ) {
+                            throw Exception("SyntaxError")
+                        }
+                    }
+                    obj.defineOwnProperty(name, desc, false)
                 }
             }
             counter++
@@ -356,6 +419,11 @@ class ToneVirtualMachine {
                 return constantPool[it].toData().toStack()
             }
         }
+        if(operand.startsWith("&")) {
+            operand.substring(1).toIntOrNull()?.let {
+                return objectPool[it].toStack()
+            }
+        }
         operand.toIntOrNull()?.let {
             return NumberStackData(NumberData.NumberKind.Real, it)
         }
@@ -364,12 +432,6 @@ class ToneVirtualMachine {
 
     private fun getValue(value: StackData): EcmaData {
         when(value) {
-            is NumberStackData -> return NumberData(value.kind,value.value)
-            is NullStackData -> return NullData()
-            is UndefinedStackData -> return UndefinedData()
-            is BooleanStackData -> return BooleanData(value.value)
-            is StringStackData -> throw NotImplementedError()
-            is ObjectStackData -> throw NotImplementedError()
             is ReferenceStackData -> {
                 //println("getValue(ref=$value)")
                 val data = referencePool[value.address] ?: throw Exception()
@@ -399,14 +461,14 @@ class ToneVirtualMachine {
                     return base.getBindingValue(data.referencedName, data.strict)
                 }
             }
-            else -> throw Exception()
+            else -> return value.toEcmaData()
         }
     }
 
     //TODO: ???????????????????
     fun putValue(left: StackData, right: EcmaData) {
         if(left !is ReferenceStackData) throw Exception("ReferenceError")
-        val value = referencePool?.get(left.address) ?: throw Exception()
+        val value = referencePool[left.address] ?: throw Exception()
         val base = value.base
         if(value.isUnresolvableReference()) {
             if(value.strict) throw Exception("ReferenceError")

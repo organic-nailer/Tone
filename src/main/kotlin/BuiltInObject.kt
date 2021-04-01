@@ -50,7 +50,8 @@ class FunctionObject(
     formalParameterList: List<String>?,
     functionBody: Parser.Node,
     scope: Environment,
-    val strict: Boolean
+    val strict: Boolean,
+    private val globalObj: GlobalObject
 ): ObjectData() {
     override val prototype: ObjectData = FunctionPrototypeObject()
     override val className: String = "Function"
@@ -62,13 +63,14 @@ class FunctionObject(
         return v
     }
 
-    override val call: ((EcmaData,List<EcmaData>,GlobalObject) -> StackData) = lambda@ { thisValue, arguments, globalObj ->
+    override val call: ((EcmaData,List<EcmaData>) -> StackData) = lambda@ { thisValue, arguments ->
         val compiler = ByteCompiler()
         compiler.runFunction(
             this, thisValue, arguments, globalObj
         )
         return@lambda ToneVirtualMachine().run(
-            compiler.byteLines, compiler.refPool, globalObj
+            compiler.byteLines, compiler.refPool,
+            compiler.constantPool, compiler.objectPool, globalObj
         )!!
     }
 
@@ -137,7 +139,7 @@ class FunctionObject(
     object ThrowTypeObject: ObjectData() {
         override val className: String = "Function"
         override val prototype: ObjectData = FunctionPrototypeObject()
-        override val call: ((EcmaData,List<EcmaData>,GlobalObject) -> StackData) = lambda@ { thisValue, arguments, globalObj ->
+        override val call: ((EcmaData,List<EcmaData>) -> StackData) = lambda@ { thisValue, arguments ->
 //            val compiler = ByteCompiler()
 //            compiler.runFunction(
 //                this, thisValue, formalParameters, globalObj
@@ -183,7 +185,8 @@ class ArgumentsObject(
     names: List<String>,
     args: List<EcmaData>,
     variableEnvironment: Environment,
-    strict: Boolean
+    strict: Boolean,
+    private val globalObj: GlobalObject
 ): ObjectData() {
     override val className: String = "Arguments"
     override val prototype: ObjectData = PrototypeObject()
@@ -250,7 +253,8 @@ class ArgumentsObject(
             null,
             ToneEngine.parseAsStatement("return $name;"),
             env,
-            true
+            true,
+            globalObj
         )
     }
 
@@ -261,7 +265,8 @@ class ArgumentsObject(
             listOf(param),
             body,
             env,
-            true
+            true,
+            globalObj
         )
     }
 

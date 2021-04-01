@@ -4,14 +4,14 @@ import kotlin.math.abs
 import kotlin.math.sign
 
 open class EcmaData {
-    fun toStack(address: Int? = null): StackData {
+    fun toStack(): StackData {
         return when(this) {
             is NumberData -> NumberStackData(this.kind, this.value)
             is UndefinedData -> UndefinedStackData()
             is NullData -> NullStackData()
             is BooleanData -> BooleanStackData(this.value)
-            is ObjectData -> ObjectStackData(address!!)
-            is StringData -> StringStackData(address!!)
+            is ObjectData -> ObjectStackData(this)
+            is StringData -> StringStackData(this.value)
             else -> throw Exception()
         }
     }
@@ -176,8 +176,7 @@ open class ObjectData: EcmaData() {
         val desc = getProperty(propertyName) ?: return null
         if(desc.type == PropertyDescriptor.DescriptorType.Data) return desc.value
         val getter = desc.get ?: return null
-        //return getter.[[Call]](this)
-        throw NotImplementedError()
+        return getter.call?.invoke(this, listOf())?.toEcmaData()
     }
     open fun getOwnProperty(propertyName: String): PropertyDescriptor? {
         if(!namedProperties.containsKey(propertyName)) {
@@ -209,8 +208,7 @@ open class ObjectData: EcmaData() {
         val desc = getProperty(propertyName)
         if(desc?.type == PropertyDescriptor.DescriptorType.Accessor) {
             val setter = desc.set!!
-            //return setter.[[Call]](this,value)
-            throw NotImplementedError()
+            setter.call?.invoke(this, listOf(value))
         }
         else {
             val newDesc = PropertyDescriptor.data(
@@ -297,12 +295,13 @@ open class ObjectData: EcmaData() {
         }
         if(descriptor.everyFieldIsAbsent()) return true
         if(current == descriptor) return true //TODO: 正しい比較
-        if(current?.configurable == true) {
+        if(current?.configurable == false) {
             if(descriptor.configurable == true) {
                 if(throwFlag) throw Exception("TypeError") //TODO: TypeError
                 return false
             }
-            if(current.enumerable != descriptor.enumerable) {
+            if(descriptor.enumerable != null
+                && current.enumerable != descriptor.enumerable) {
                 if(throwFlag) throw Exception("TypeError") //TODO: TypeError
                 return false
             }
@@ -369,7 +368,7 @@ open class ObjectData: EcmaData() {
 
     open val primitiveValue: EcmaPrimitive? = null
     open val construct: ((List<Any>) -> ObjectData)? = null
-    open val call: ((EcmaData,List<EcmaData>,GlobalObject) -> StackData)? = null
+    open val call: ((EcmaData,List<EcmaData>) -> StackData)? = null
     open val hasInstance: ((Any) -> Boolean)? = null
     open val scope: Environment? = null
     open val formalParameters: List<String>? = null

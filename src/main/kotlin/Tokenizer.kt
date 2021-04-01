@@ -108,6 +108,14 @@ class Tokenizer(input: String) {
                         )
                         )
                     }
+                    identifier == "this" -> {
+                        res.add(
+                            TokenData("this",
+                                EcmaGrammar.Symbols.ThisLiteral.ordinal,
+                                lineNumber,lineIndex,lineNumber,lineIndex+4
+                            )
+                        )
+                    }
                     keywords.contains(identifier) -> {
                         res.add(
                             TokenData(identifier,
