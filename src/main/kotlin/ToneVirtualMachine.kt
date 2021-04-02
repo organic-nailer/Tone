@@ -308,8 +308,7 @@ class ToneVirtualMachine {
                     return func.call!!.invoke(thisValue, arguments)
                 }
                 ByteCompiler.OpCode.Return -> {
-                    val ref = mainStack.removeFirst()
-                    return getValue(ref).toStack()
+                    return mainStack.removeFirst()
                 }
                 ByteCompiler.OpCode.ResolveMember -> {
                     val propertyNameReference = mainStack.removeFirst()
@@ -395,6 +394,21 @@ class ToneVirtualMachine {
                     if(constructor !is ObjectData) throw Exception("TypeError")
                     if(constructor.construct == null) throw Exception("TypeError")
                     return constructor.construct!!.invoke(arguments).toStack()
+                }
+                ByteCompiler.OpCode.With -> {
+                    val thisValue = getValue(mainStack.removeFirst())
+                    val withObj = getValue(mainStack.removeFirst()) as WithObject
+                    val result = withObj.run(toObject(thisValue))
+                    if(result.type == "break" || result.type == "continue") {
+                        if(result.target != null) {
+                            for(i in 0 until result.pop) {
+                                mainStack.removeFirst()
+                            }
+                            counter = result.target
+                            continue
+                        }
+                        else throw Exception()
+                    }
                 }
             }
             counter++

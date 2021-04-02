@@ -53,6 +53,37 @@ class ByteCompiler {
         replaceLabel()
     }
 
+    fun runWith(
+        code: Node,
+        obj: ObjectData,
+        scope: List<ScopeData>,
+        currentContext: ExecutionContext,
+        global: GlobalObject
+    ) {
+        byteLines.clear()
+        labelTable.clear()
+        contextStack.clear()
+        scopeStack.clear()
+        scopeStack.addAll(0,scope)
+
+        val newEnv = newObjectEnvironment(obj,currentContext.lexicalEnvironment,global)
+
+        val context = ExecutionContext(
+            newEnv,
+            currentContext.variableEnvironment,
+            currentContext.thisBinding
+        )
+        globalObject = global
+        contextStack.addFirst(context)
+        scopeStack.addFirst(ScopeData(NodeType.WithStatement))
+
+        compile(code, noScope = true)
+
+        scopeStack.removeFirst()
+        contextStack.removeFirst()
+        replaceLabel()
+    }
+
 //    fun run(node: Node) {
 //        byteLines.clear()
 //        labelTable.clear()
@@ -317,6 +348,32 @@ class ByteCompiler {
             }
             NodeType.BreakStatement -> {
                 if(node.label != null) {
+                    val withIndex = scopeStack.indexOfFirst { it.type == NodeType.WithStatement }
+                    if(withIndex >= 0) {
+                        val label = node.label.name!!
+                        val scopeIndex = scopeStack.indexOfFirst {
+                            it.label == label
+                                || it.type == NodeType.FunctionDeclaration
+                                || it.type == NodeType.FunctionExpression
+                        }
+                        if(scopeIndex < 0) throw Exception("SyntaxError")
+                        val scope = scopeStack[scopeIndex]
+                        if(scope.type == NodeType.FunctionExpression
+                            || scope.type == NodeType.FunctionDeclaration) throw Exception("SyntaxError")
+                        if(scopeIndex >= withIndex) {
+                            writeOp(OpCode.Push, useCompletion("break",scope.labelBreak!!,
+                                scopeIndex - (if(noScope) 1 else 0) - withIndex
+                            ))
+                            writeOp(OpCode.Return)
+                        }
+                        else {
+                            for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) {
+                                writeOp(OpCode.Pop)
+                            }
+                            writeOp(OpCode.Goto, scope.labelBreak!!)
+                        }
+                        return
+                    }
                     val label = node.label.name!!
                     val scopeIndex = scopeStack.indexOfFirst {
                         it.label == label
@@ -333,6 +390,35 @@ class ByteCompiler {
                     writeOp(OpCode.Goto, scope.labelBreak!!)
                 }
                 else {
+                    val withIndex = scopeStack.indexOfFirst { it.type == NodeType.WithStatement }
+                    if(withIndex >= 0) {
+                        val scopeIndex = scopeStack.indexOfFirst {
+                            it.type == NodeType.DoWhileStatement
+                                || it.type == NodeType.WhileStatement
+                                || it.type == NodeType.ForStatement
+                                || it.type == NodeType.ForInStatement
+                                || it.type == NodeType.SwitchStatement
+                                || it.type == NodeType.FunctionDeclaration
+                                || it.type == NodeType.FunctionExpression
+                        }
+                        if(scopeIndex < 0) throw Exception("SyntaxError")
+                        val scope = scopeStack[scopeIndex]
+                        if(scope.type == NodeType.FunctionExpression
+                            || scope.type == NodeType.FunctionDeclaration) throw Exception("SyntaxError")
+                        if(scopeIndex >= withIndex) {
+                            writeOp(OpCode.Push, useCompletion("break",scope.labelBreak!!,
+                                scopeIndex - (if(noScope) 1 else 0) - withIndex
+                            ))
+                            writeOp(OpCode.Return)
+                        }
+                        else {
+                            for(i in 0 until scopeIndex - (if(noScope) 1 else 0)) {
+                                writeOp(OpCode.Pop)
+                            }
+                            writeOp(OpCode.Goto, scope.labelBreak!!)
+                        }
+                        return
+                    }
                     val scopeIndex = scopeStack.indexOfFirst {
                         it.type == NodeType.DoWhileStatement
                             || it.type == NodeType.WhileStatement
@@ -354,6 +440,34 @@ class ByteCompiler {
             }
             NodeType.ContinueStatement -> {
                 if(node.label != null) {
+                    val withIndex = scopeStack.indexOfFirst { it.type == NodeType.WithStatement }
+                    if(withIndex >= 0) {
+                        val label = node.label.name!!
+                        val scopeIndex = scopeStack.indexOfFirst {
+                            it.label == label
+                                || it.type == NodeType.FunctionDeclaration
+                                || it.type == NodeType.FunctionExpression
+                        }
+                        if(scopeIndex < 0) throw Exception("SyntaxError")
+                        val scope = scopeStack[scopeIndex]
+                        if(scope.type != NodeType.DoWhileStatement
+                            && scope.type != NodeType.WhileStatement
+                            && scope.type != NodeType.ForStatement
+                            && scope.type != NodeType.ForInStatement) throw Exception("SyntaxError")
+                        if(scopeIndex >= withIndex) {
+                            writeOp(OpCode.Push, useCompletion("continue",scope.labelBreak!!,
+                                scopeIndex + 1 - (if(noScope) 1 else 0) - withIndex
+                            ))
+                            writeOp(OpCode.Return)
+                        }
+                        else {
+                            for(i in 0 until scopeIndex + 1 - (if(noScope) 1 else 0)) {
+                                writeOp(OpCode.Pop)
+                            }
+                            writeOp(OpCode.Goto, scope.labelContinue!!)
+                        }
+                        return
+                    }
                     val label = node.label.name!!
                     val scopeIndex = scopeStack.indexOfFirst {
                         it.label == label
@@ -372,6 +486,34 @@ class ByteCompiler {
                     writeOp(OpCode.Goto, scope.labelContinue!!)
                 }
                 else {
+                    val withIndex = scopeStack.indexOfFirst { it.type == NodeType.WithStatement }
+                    if(withIndex >= 0) {
+                        val scopeIndex = scopeStack.indexOfFirst {
+                            it.type == NodeType.DoWhileStatement
+                                || it.type == NodeType.WhileStatement
+                                || it.type == NodeType.ForStatement
+                                || it.type == NodeType.ForInStatement
+                                || it.type == NodeType.FunctionDeclaration
+                                || it.type == NodeType.FunctionExpression
+                        }
+                        if(scopeIndex < 0) throw Exception("SyntaxError")
+                        val scope = scopeStack[scopeIndex]
+                        if(scope.type == NodeType.FunctionExpression
+                            || scope.type == NodeType.FunctionDeclaration) throw Exception("SyntaxError")
+                        if(scopeIndex >= withIndex) {
+                            writeOp(OpCode.Push, useCompletion("continue",scope.labelBreak!!,
+                                scopeIndex + 1 - (if(noScope) 1 else 0) - withIndex
+                            ))
+                            writeOp(OpCode.Return)
+                        }
+                        else {
+                            for(i in 0 until scopeIndex + 1 - (if(noScope) 1 else 0)) {
+                                writeOp(OpCode.Pop)
+                            }
+                            writeOp(OpCode.Goto, scope.labelContinue!!)
+                        }
+                        return
+                    }
                     val scopeIndex = scopeStack.indexOfFirst {
                         it.type == NodeType.DoWhileStatement
                             || it.type == NodeType.WhileStatement
@@ -410,11 +552,21 @@ class ByteCompiler {
                 } ?: kotlin.run {
                     writeOp(OpCode.Push, "undefined")
                 }
+                writeOp(OpCode.GetValue)
                 writeOp(OpCode.Return)
             }
             NodeType.DebuggerStatement -> {
                 //TODO: debug
                 writeOp(OpCode.Push, "empty")
+            }
+            NodeType.WithStatement -> {
+                val obj = WithObject(
+                    node.bodySingle!!, scopeStack,
+                    contextStack.first(), globalObject!!
+                )
+                writeOp(OpCode.Push, useObject(obj))
+                compile(node.`object`!!)
+                writeOp(OpCode.With)
             }
             NodeType.VariableDeclaration -> {
                 node.declarations!!.forEach { declaration ->
@@ -677,6 +829,9 @@ class ByteCompiler {
         objectPool.add(value)
         return "&${objectPool.size-1}"
     }
+    private fun useCompletion(type: String, target: String, pop: Int): String {
+        return "C:$type,$target,$pop"
+    }
 
     private fun replaceLabel() {
         println("labels")
@@ -685,6 +840,11 @@ class ByteCompiler {
         }
         for(i in byteLines.indices) {
             val operand = byteLines[i].operand ?: continue
+            if(operand.startsWith("C:")) {
+                val target = operand.split(",")[1]
+                byteLines[i] = byteLines[i].copy(operand = operand.replace(target,labelTable[target].toString()))
+                continue
+            }
             labelTable[operand]?.let {
                 byteLines[i] = byteLines[i].copy(operand = "$it")
             }
@@ -707,7 +867,7 @@ class ByteCompiler {
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
         GetValue, IfEmpty, Swap, Assign, Copy, Call,
-        Return, ResolveMember, Define, New
+        Return, ResolveMember, Define, New, With
     }
 
     data class ScopeData(

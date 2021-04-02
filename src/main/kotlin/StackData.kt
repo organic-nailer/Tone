@@ -46,3 +46,13 @@ class EmptyStackData: StackData {
     override fun toString(): String = "sEmpty"
     override fun toEcmaData(): EcmaData = throw Exception()
 }
+
+data class CompletionStackData(
+    val type: String,
+    val value: StackData,
+    val target: Int?,
+    val pop: Int = 0
+): StackData {
+    override fun toString(): String = "sc($type,$value,$target)"
+    override fun toEcmaData(): EcmaData = throw Exception()
+}
