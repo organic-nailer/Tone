@@ -1,15 +1,30 @@
 class WithObject(
-    override val code: Parser.Node,
-    private val scopeList: List<ByteCompiler.ScopeData>,
-    private val currentContext: ExecutionContext,
-    private val global: GlobalObject
+    val body: List<ByteCompiler.NonByteOperation?>,
+    val currentContext: ExecutionContext,
+    val globalObject: GlobalObject
 ): ObjectData() {
-    fun run(thisObj: ObjectData): CompletionStackData {
+    fun resolve(
+        thisObj: ObjectData,
+        currentRef: List<ReferenceData>,
+        currentConst: List<EcmaPrimitive>,
+        currentObj: List<ObjectData>
+    ): ByteCompiler.ByteData {
         val compiler = ByteCompiler()
-        compiler.runWith(code, thisObj, scopeList, currentContext, global)
-        return ToneVirtualMachine().run(
-            compiler.byteLines, compiler.refPool,
-            compiler.constantPool, compiler.objectPool, global
-        ) as CompletionStackData
+        val newEnv = newObjectEnvironment(thisObj, currentContext.lexicalEnvironment, globalObject)
+        val context = ExecutionContext(
+            newEnv, currentContext.variableEnvironment, currentContext.thisBinding
+        )
+        return compiler.resolveReference(
+            body, context, globalObject,
+            currentRef, currentConst, currentObj
+        )
+//        compiler.runWith(code, thisObj, scopeList, currentContext, global)
+//        return ToneVirtualMachine().run(
+//            data.byteLines,
+//            data.refPool,
+//            data.constantPool,
+//            data.objectPool,
+//            data.global
+//        )
     }
 }

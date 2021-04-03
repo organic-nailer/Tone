@@ -9,17 +9,18 @@ import TypeConverter.toString
 import TypeConverter.toUInt32
 
 class ToneVirtualMachine {
-    private val referencePool = mutableListOf<ReferenceData?>()
+    private val referencePool = mutableListOf<ReferenceData>()
     private val constantPool = mutableListOf<EcmaPrimitive>()
     private val objectPool = mutableListOf<ObjectData>()
     var globalObjectData: GlobalObject? = null
     fun run(
-        code: List<ByteCompiler.ByteOperation>,
-        refPool: List<ReferenceData?>,
+        code: List<ByteCompiler.ByteOperation?>,
+        refPool: List<ReferenceData>,
         constPool: List<EcmaPrimitive>,
         objPool: List<ObjectData>,
         global: GlobalObject
     ): StackData? {
+        val mutCode = code.toMutableList()
         referencePool.clear()
         referencePool.addAll(refPool)
         constantPool.clear()
@@ -29,10 +30,11 @@ class ToneVirtualMachine {
         globalObjectData = global
         val mainStack = ArrayDeque<StackData>()
         var counter = 0
-        while(counter < code.size) {
+        while(counter < mutCode.size) {
             println("$counter: $mainStack")
-            val operation = code[counter]
+            val operation = mutCode[counter]
             println("op=$operation")
+            if(operation == null) throw Exception()
             when(operation.opCode) {
                 ByteCompiler.OpCode.Push -> {
                     mainStack.addFirst(operandToData(operation.operand))
@@ -396,18 +398,25 @@ class ToneVirtualMachine {
                     return constructor.construct!!.invoke(arguments).toStack()
                 }
                 ByteCompiler.OpCode.With -> {
+                    val codeLength = operation.operand?.toIntOrNull() ?: throw Exception()
                     val thisValue = getValue(mainStack.removeFirst())
                     val withObj = getValue(mainStack.removeFirst()) as WithObject
-                    val result = withObj.run(toObject(thisValue))
-                    if(result.type == "break" || result.type == "continue") {
-                        if(result.target != null) {
-                            for(i in 0 until result.pop) {
-                                mainStack.removeFirst()
-                            }
-                            counter = result.target
-                            continue
-                        }
-                        else throw Exception()
+                    val result = withObj.resolve(
+                        toObject(thisValue),
+                        referencePool, constantPool, objectPool
+                    )
+                    println("refs=${result.refPool}")
+                    println("consts=${result.constantPool}")
+                    println("objs=${result.objectPool}")
+                    referencePool.clear()
+                    referencePool.addAll(result.refPool)
+                    constantPool.clear()
+                    constantPool.addAll(result.constantPool)
+                    objectPool.clear()
+                    objectPool.addAll(result.objectPool)
+                    if(result.byteLines.size != codeLength) throw Exception()
+                    for(i in 0 until codeLength) {
+                        mutCode[counter + 1 + i] = result.byteLines[i]
                     }
                 }
             }

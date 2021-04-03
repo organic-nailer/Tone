@@ -20,18 +20,26 @@ class ToneTest {
         }
         val compiler = ByteCompiler()
         compiler.runGlobal(node, GlobalObject())
-        compiler.byteLines.forEach { op ->
-            println("${op.opCode} ${op.operand ?: ""}")
+        compiler.nonByteLines.forEach { op ->
+            if(op == null) println("[empty]")
+            else println("${op.opCode} ${op.data ?: ""}")
         }
-        compiler.refPool.forEachIndexed { index, referenceData ->
-            println("$index: ${referenceData.referencedName}")
+        println("----------")
+        val data = compiler.resolveReference(compiler.nonByteLines, null, compiler.globalObject!!)
+        println("resolved")
+        data.byteLines.forEach { op ->
+            if(op == null) println("[empty]")
+            else println("${op.opCode} ${op.operand ?: ""}")
         }
+        println("refs=${data.refPool}")
+        println("consts=${data.constantPool}")
+        println("objs=${data.objectPool}")
         val vm = ToneVirtualMachine()
-        return vm.run(compiler.byteLines,
-            compiler.refPool,
-            compiler.constantPool,
-            compiler.objectPool,
-            compiler.globalObject!!
+        return vm.run(data.byteLines,
+            data.refPool,
+            data.constantPool,
+            data.objectPool,
+            data.global
         )
     }
 
@@ -288,5 +296,25 @@ class ToneTest {
         println(code)
         println("\nresult=$result")
         Assert.assertEquals(7, (result as? NumberStackData)?.value)
+    }
+
+    @Test
+    fun withStmtTest() {
+        val code = """
+            var x = {
+                p1: 1,
+                p2: 2,
+            };
+            var p1 = 10;
+            with(x) {
+                p2 = p2 + p1;
+            }
+            x.p2;
+        """.trimIndent()
+        val result = run(code)
+        println("\ncode=")
+        println(code)
+        println("\nresult=$result")
+        Assert.assertEquals(3, (result as? NumberStackData)?.value)
     }
 }

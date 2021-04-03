@@ -13,11 +13,11 @@ fun main(args: Array<String>) {
     val compiler = ByteCompiler()
     compiler.runGlobal(node, GlobalObject())
     val vm = ToneVirtualMachine()
-    val result = vm.run(
-        compiler.byteLines, compiler.refPool,
-        compiler.constantPool, compiler.objectPool,
-        compiler.globalObject!!)
-    println("result:")
-    println("${args.first()} => $result")
+//    val result = vm.run(
+//        compiler.byteLines, compiler.refPool,
+//        compiler.constantPool, compiler.objectPool,
+//        compiler.globalObject!!)
+//    println("result:")
+//    println("${args.first()} => $result")
     return
 }

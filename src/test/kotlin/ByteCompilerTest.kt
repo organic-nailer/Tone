@@ -10,8 +10,9 @@ class ByteCompilerTest {
         parser.parsedNode?.let {
             compiler.runGlobal(it, GlobalObject())
             println("compiled:")
-            compiler.byteLines.forEach { op ->
-                println("${op.opCode} ${op.operand ?: ""}")
+            compiler.nonByteLines.forEach { op ->
+                if(op == null) println("[empty]")
+                else println("${op.opCode} ${op.data ?: ""}")
             }
             assert(true)
         } ?: kotlin.run { assert(false) }
