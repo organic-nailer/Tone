@@ -68,9 +68,12 @@ class FunctionObject(
         compiler.runFunction(
             this, thisValue, arguments, globalObj
         )
-        return@lambda ToneVirtualMachine().run(
-            compiler.byteLines, compiler.refPool,
-            compiler.constantPool, compiler.objectPool, globalObj
+        val data = compiler.resolveReference(compiler.nonByteLines, null, globalObj)
+        return@lambda ToneVirtualMachine().run(data.byteLines,
+            data.refPool,
+            data.constantPool,
+            data.objectPool,
+            data.global
         )!!
     }
 
