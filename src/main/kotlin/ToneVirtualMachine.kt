@@ -307,7 +307,7 @@ class ToneVirtualMachine {
                     else {
                         thisValue = UndefinedData()
                     }
-                    return func.call!!.invoke(thisValue, arguments)
+                    mainStack.addFirst(func.call!!.invoke(thisValue, arguments))
                 }
                 ByteCompiler.OpCode.Return -> {
                     return mainStack.removeFirst()

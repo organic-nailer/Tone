@@ -28,7 +28,8 @@ class ExecutionContext(
             f: FunctionObject,
             thisArg: EcmaData?,
             arguments: List<EcmaData>,
-            globalObject: GlobalObject
+            globalObject: GlobalObject,
+            initVariables: List<Pair<String,EcmaData?>> = listOf()
         ): ExecutionContext {
             val thisBinding = if(f.strict) {
                 thisArg
@@ -40,6 +41,13 @@ class ExecutionContext(
                 thisArg
             }
             val localEnv = newDeclarativeEnvironment(f.scope, globalObject)
+            initVariables.forEach { p ->
+                (localEnv.records as DeclarativeEnvironmentRecords)
+                    .createImmutableBinding(p.first)
+                if(p.second != null) {
+                    (localEnv.records as DeclarativeEnvironmentRecords).initializeImmutableBinding(p.first, p.second!!)
+                }
+            }
             val context = ExecutionContext(
                 thisBinding = thisBinding as ObjectData, //TODO 角煮
                 lexicalEnvironment = localEnv,

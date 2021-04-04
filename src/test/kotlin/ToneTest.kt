@@ -317,4 +317,20 @@ class ToneTest {
         println("\nresult=$result")
         Assert.assertEquals(3, (result as? NumberStackData)?.value)
     }
+
+    @Test
+    fun functionExpressionTest() {
+        val code = """
+            var x = function factorial(a) {
+                if(a == 1) return 1;
+                return factorial(a-1) * a;
+            }
+            x(5);
+        """.trimIndent()
+        val result = run(code)
+        println("\ncode=")
+        println(code)
+        println("\nresult=$result")
+        Assert.assertEquals(120, (result as? NumberStackData)?.value)
+    }
 }

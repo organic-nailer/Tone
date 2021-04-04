@@ -19,19 +19,14 @@ class ByteCompiler {
         }
     }
 
-    //val byteLines: MutableList<ByteOperation> = mutableListOf()
     val nonByteLines: MutableList<NonByteOperation?> = mutableListOf()
     private val labelTable: MutableMap<String, Int> = mutableMapOf()
     private var uniqueLabelIndex = 0
     private val contextStack = ArrayDeque<ExecutionContext>()
     private val scopeStack = ArrayDeque<ScopeData>()
-    //val refPool = mutableListOf<ReferenceData>()
-    //val constantPool = mutableListOf<EcmaPrimitive>()
-    //val objectPool = mutableListOf<ObjectData>()
     var globalObject: GlobalObject? = null
 
     fun runGlobal(code: Node, global: GlobalObject) {
-        //byteLines.clear()
         nonByteLines.clear()
         labelTable.clear()
         contextStack.clear()
@@ -56,15 +51,15 @@ class ByteCompiler {
         f: FunctionObject,
         thisArg: EcmaData?,
         arguments: List<EcmaData>,
+        initVariables: List<Pair<String,EcmaData>>,
         global: GlobalObject
     ) {
-        //byteLines.clear()
         nonByteLines.clear()
         labelTable.clear()
         contextStack.clear()
 
         val context = ExecutionContext.function(
-            f, thisArg, arguments, global
+            f, thisArg, arguments, global, initVariables
         )
         globalObject = global
         contextStack.addFirst(context)
@@ -87,7 +82,6 @@ class ByteCompiler {
         labelIndex: Int,
         global: GlobalObject
     ) {
-        //byteLines.clear()
         nonByteLines.clear()
         nonByteLines.addAll(nonBytes)
         labelTable.clear()
@@ -97,22 +91,12 @@ class ByteCompiler {
         scopeStack.clear()
         scopeStack.addAll(0,scope)
 
-//        val newEnv = newObjectEnvironment(obj,currentContext.lexicalEnvironment,global)
-//
-//        val context = ExecutionContext(
-//            newEnv,
-//            currentContext.variableEnvironment,
-//            currentContext.thisBinding
-//        )
         globalObject = global
-//        contextStack.addFirst(context)
-//        writeOp(ContextOp.Push, Context, context)
         scopeStack.addFirst(ScopeData(NodeType.WithStatement))
 
         compile(code, noScope = true)
 
         scopeStack.removeFirst()
-//        contextStack.removeFirst()
         writeOp(ContextOp.Pop)
         replaceLabel()
     }
@@ -650,8 +634,17 @@ class ByteCompiler {
                 }
                 writeOp(OpCode.New, Raw, (node.arguments?.size ?: 0).toString())
             }
+            NodeType.FunctionExpression -> {
+                val args = node.params!!.map { it.name!! }
+                val id = node.id!!.name!!
+                val func = NonByteOperation.FunctionPart(
+                    args,
+                    node.bodySingle!!,
+                    id
+                )
+                writeOp(OpCode.Push, FuncPart, func)
+            }
             NodeType.ThisExpression -> {
-//                writeOp(OpCode.Push, useObject(contextStack.first().thisBinding))
                 writeOp(OpCode.Push, This)
             }
             NodeType.ObjectExpression -> {
@@ -674,10 +667,6 @@ class ByteCompiler {
                         val closure = NonByteOperation.FunctionPart(
                             listOf(), property.valueNode!!.bodySingle!!
                         )
-//                        val closure = FunctionObject(listOf(),
-//                            property.valueNode!!.bodySingle!!,
-//                            contextStack.first().lexicalEnvironment,
-//                            false, globalObject!!) //TODO: strict
                         writeOp(OpCode.Push, FuncPart, closure)
                         writeOp(OpCode.Define, Raw, "get")
                     }
@@ -686,11 +675,6 @@ class ByteCompiler {
                             property.valueNode!!.params!!.map { it.name!! },
                             property.valueNode.bodySingle!!
                         )
-//                        val closure = FunctionObject(
-//                            property.valueNode!!.params!!.map { it.name!! },
-//                            property.valueNode.bodySingle!!,
-//                            contextStack.first().lexicalEnvironment,
-//                            false, globalObject!!) //TODO: strict
                         writeOp(OpCode.Push, FuncPart, closure)
                         writeOp(OpCode.Define, Raw, "set")
                     }
@@ -726,17 +710,7 @@ class ByteCompiler {
             }
             NodeType.Identifier -> {
                 val identifier = node.name!!
-//                val resolved = contextStack.first()
-//                    .resolveIdentifier(identifier, false) //TODO: strict
                 writeOp(OpCode.Push, Identifier, identifier)
-//                if(refPool.contains(resolved)) {
-//                    val index = refPool.indexOf(resolved)
-//                    writeOp(OpCode.Push, "#$index")
-//                }
-//                else {
-//                    refPool.add(resolved)
-//                    writeOp(OpCode.Push, "#${refPool.size-1}")
-//                }
             }
             else -> {
                 throw NotImplementedError("${node.type} is Not Implemented")
@@ -747,7 +721,6 @@ class ByteCompiler {
     var contextStackOffset = 0
     private fun writeOp(operator: NonByteOp, type: NonByteOperation.NonByteDataType? = null, data: Any? = null) {
         if(operator is ContextOp) contextStackOffset++
-//        byteLines.add(ByteOperation(operator, operand))
         if(type == null) {
             nonByteLines.add(NonByteOperation(operator))
         }
@@ -761,23 +734,11 @@ class ByteCompiler {
         }
     }
     private fun writeLabel(label: String) {
-//        labelTable[label] = byteLines.size
         labelTable[label] = nonByteLines.size - contextStackOffset
     }
     private fun getUniqueLabel(): String {
         return "L${uniqueLabelIndex++}"
     }
-//    private fun useConst(value: EcmaPrimitive): String {
-//        constantPool.add(value)
-//        return "@${constantPool.size-1}"
-//    }
-//    private fun useObject(value: ObjectData): String {
-//        objectPool.add(value)
-//        return "&${objectPool.size-1}"
-//    }
-//    private fun useCompletion(type: String, target: String, pop: Int): String {
-//        return "C:$type,$target,$pop"
-//    }
 
     private fun replaceLabel() {
         println("labels")
@@ -806,17 +767,6 @@ class ByteCompiler {
                 )
             }
         }
-//        for(i in byteLines.indices) {
-//            val operand = byteLines[i].operand ?: continue
-//            if(operand.startsWith("C:")) {
-//                val target = operand.split(",")[1]
-//                byteLines[i] = byteLines[i].copy(operand = operand.replace(target,labelTable[target].toString()))
-//                continue
-//            }
-//            labelTable[operand]?.let {
-//                byteLines[i] = byteLines[i].copy(operand = "$it")
-//            }
-//        }
     }
 
     fun resolveReference(
@@ -881,6 +831,9 @@ class ByteCompiler {
                             contextStack.first().lexicalEnvironment,
                             false, globalObject!!
                         ) //TODO: strict
+                        if(part.provideThis != null) {
+                            func.initVariables = listOf(part.provideThis to func)
+                        }
                         objectPool.add(func)
                         byteLines.add(ByteOperation(
                             operation.opCode, "&${objectPool.size-1}"
@@ -954,7 +907,8 @@ class ByteCompiler {
         }
         data class FunctionPart(
             val args: List<String>,
-            val body: Node
+            val body: Node,
+            val provideThis: String? = null
         )
         data class WithPartData(
             val body: List<NonByteOperation?>

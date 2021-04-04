@@ -63,10 +63,12 @@ class FunctionObject(
         return v
     }
 
+    var initVariables: List<Pair<String,EcmaData>> = listOf()
+
     override val call: ((EcmaData,List<EcmaData>) -> StackData) = lambda@ { thisValue, arguments ->
         val compiler = ByteCompiler()
         compiler.runFunction(
-            this, thisValue, arguments, globalObj
+            this, thisValue, arguments, initVariables, globalObj
         )
         val data = compiler.resolveReference(compiler.nonByteLines, null, globalObj)
         return@lambda ToneVirtualMachine().run(data.byteLines,
