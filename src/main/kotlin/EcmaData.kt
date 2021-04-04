@@ -380,6 +380,26 @@ open class ObjectData: EcmaData() {
     open val match: Function<Any>? = null
     open val parameterMap: ObjectData? = null
 
+    private val searchedEnumKeys: MutableSet<String> = mutableSetOf()
+    fun initEnum() {
+        searchedEnumKeys.clear()
+        prototype?.initEnum()
+    }
+    fun nextEnum(subKeys: Set<String> = setOf()): String? {
+        for(namedProperty in namedProperties) {
+            if(searchedEnumKeys.contains(namedProperty.key)
+                || subKeys.contains(namedProperty.key)) continue
+            searchedEnumKeys.add(namedProperty.key)
+            if(namedProperty.value.enumerable == true) {
+                return namedProperty.key
+            }
+        }
+        if(prototype != null) {
+            return prototype!!.nextEnum(searchedEnumKeys)
+        }
+        return null
+    }
+
     data class PropertyDescriptor(
         val type: DescriptorType,
         val value: EcmaData? = null,

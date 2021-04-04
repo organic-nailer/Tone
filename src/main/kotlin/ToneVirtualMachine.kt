@@ -454,6 +454,23 @@ class ToneVirtualMachine {
                         mutCode[counter + 1 + i] = result.byteLines[i]
                     }
                 }
+                ByteCompiler.OpCode.EnumInit -> {
+                    val exprRef = mainStack.first()
+                    val exprValue = getValue(exprRef) //null, undefinedは来ない
+                    val obj = toObject(exprValue)
+                    obj.initEnum()
+                }
+                ByteCompiler.OpCode.EnumNext -> {
+                    val endAddress = operation.operand?.toIntOrNull() ?: throw Exception()
+                    val objRef = mainStack.first()
+                    val obj = getValue(objRef) as ObjectData
+                    val property = obj.nextEnum()
+                    if(property == null) {
+                        counter = endAddress
+                        continue
+                    }
+                    mainStack.addFirst(StringStackData(property))
+                }
             }
             counter++
         }
@@ -509,7 +526,11 @@ class ToneVirtualMachine {
                 val data = referencePool[value.address] ?: throw Exception()
                 //println("data=$data")
                 val base = data.base
-                if(data.isUnresolvableReference()) throw Exception("ReferenceError")
+                if(data.isUnresolvableReference()) {
+                    //動的に追加された変数はReferenceDataで解決されないのでGlobalObjectに探しに行く
+                    return globalObjectData!!.get(data.referencedName)
+                        ?: throw Exception("ReferenceError")
+                }
                 if(data.isPropertyReference()) {
                     if(!data.hasPrimitiveBase()) {
                         return (base as ObjectData).get(data.referencedName) ?: UndefinedData()

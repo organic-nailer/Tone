@@ -347,4 +347,30 @@ class ToneTest {
         println("\nresult=$result")
         Assert.assertEquals(12, (result as? NumberStackData)?.value)
     }
+
+    @Test
+    fun forInTest() {
+        val code = """
+var x = 0;
+var y = {
+    p1: 1, p2: 2, p3: 3,
+};
+for(i in y) {
+    x += y[i];
+}
+var z = null;
+for(i in z) {
+    x++;
+}
+for(var a in y) {
+    x += y[a];
+}
+x;
+        """.trimIndent()
+        val result = run(code)
+        println("\ncode=")
+        println(code)
+        println("\nresult=$result")
+        Assert.assertEquals(12, (result as? NumberStackData)?.value)
+    }
 }

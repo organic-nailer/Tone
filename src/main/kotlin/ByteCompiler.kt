@@ -298,10 +298,57 @@ class ByteCompiler {
                 scopeStack.removeFirst()
             }
             NodeType.ForInStatement -> {
-                //TODO: break, continue
-                scopeStack.addFirst(ScopeData(node.type))
+                val labelBreak = getUniqueLabel()
+                val labelContinue = getUniqueLabel()
+                scopeStack.addFirst(ScopeData(node.type, scopeLabel, labelBreak, labelContinue))
+                val labelStart = getUniqueLabel()
+                val labelEnd = getUniqueLabel()
+
+                compile(node.right!!)
+                writeOp(OpCode.Copy)
+                writeOp(OpCode.Push, Raw, "null")
+                writeOp(OpCode.Neq)
+                writeOp(OpCode.IfFalse, Raw, labelEnd)
+                writeOp(OpCode.Pop)
+
+                writeOp(OpCode.EnumInit)
+
+                writeOp(OpCode.Push, Raw, "empty")
+                writeLabel(labelStart)
+                writeOp(OpCode.Swap)
+                writeOp(OpCode.EnumNext, Raw, labelEnd)
+
+                if(node.left!!.type == NodeType.VariableDeclaration) {
+                    //for-inの変数定義内での初期化子は無視
+                    //文法的には書けそうだけど未定義動作らしいし...
+                    val varName = node.left.declarations!![0].id!!.name!!
+                    writeOp(OpCode.Push, Identifier, varName)
+                }
+                else {
+                    compile(node.left)
+                }
+
+                writeOp(OpCode.Swap)
+                writeOp(OpCode.Assign)
+                writeOp(OpCode.Pop)
+                writeOp(OpCode.Swap)
+
+                compile(node.bodySingle!!, noScope = true)
+                val label = getUniqueLabel()
+                writeOp(OpCode.IfEmpty, Raw, label)
+                writeOp(OpCode.Swap)
+                writeLabel(label)
+                writeOp(OpCode.Pop)
+                writeLabel(labelContinue)
+
+                writeOp(OpCode.Goto, Raw, labelStart)
+                writeLabel(labelBreak)
+                writeOp(OpCode.Pop)
+                writeLabel(labelEnd)
+                writeOp(OpCode.Swap)
+                writeOp(OpCode.Pop)
+
                 scopeStack.removeFirst()
-                throw NotImplementedError()
             }
             NodeType.SwitchStatement -> {
                 val labelBreak = getUniqueLabel()
@@ -959,7 +1006,8 @@ class ByteCompiler {
         Eq, Neq, EqS, NeqS, IfTrue, IfFalse,
         Delete, TypeOf, ToNum, Neg, Not, LogicalNot, Goto,
         GetValue, IfEmpty, Swap, Assign, Copy, Call,
-        Return, ResolveMember, Define, New, With
+        Return, ResolveMember, Define, New, With,
+        EnumInit, EnumNext
     }
 
     data class ScopeData(
