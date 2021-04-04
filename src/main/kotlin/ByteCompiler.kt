@@ -558,6 +558,30 @@ class ByteCompiler {
                 }
                 writeOp(code)
             }
+            NodeType.UpdateExpression -> {
+                if(node.prefix!!) {
+                    compile(node.argument!!)
+                    writeOp(OpCode.Copy)
+                    writeOp(OpCode.Push, Raw, "1")
+                    when(node.operator!!) {
+                        "++" -> writeOp(OpCode.Add)
+                        "--" -> writeOp(OpCode.Sub)
+                    }
+                    writeOp(OpCode.Assign)
+                }
+                else {
+                    compile(node.argument!!)
+                    writeOp(OpCode.Copy)
+                    writeOp(OpCode.Copy)
+                    writeOp(OpCode.Push, Raw, "1")
+                    when(node.operator!!) {
+                        "++" -> writeOp(OpCode.Add)
+                        "--" -> writeOp(OpCode.Sub)
+                    }
+                    writeOp(OpCode.Assign)
+                    writeOp(OpCode.Pop)
+                }
+            }
             NodeType.ConditionalExpression -> {
                 node.test?.let { compile(it) }
                 val label = getUniqueLabel()

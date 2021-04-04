@@ -333,4 +333,18 @@ class ToneTest {
         println("\nresult=$result")
         Assert.assertEquals(120, (result as? NumberStackData)?.value)
     }
+
+    @Test
+    fun incrementTest() {
+        val code = """
+            var x = 1;
+            var y = x++ + ++x * 2;
+            --y + x-- * 2;
+        """.trimIndent()
+        val result = run(code)
+        println("\ncode=")
+        println(code)
+        println("\nresult=$result")
+        Assert.assertEquals(12, (result as? NumberStackData)?.value)
+    }
 }
