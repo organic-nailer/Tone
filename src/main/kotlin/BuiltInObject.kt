@@ -1,4 +1,5 @@
 class GlobalObject: ObjectData() {
+    override val isNative: Boolean = true
     override val prototype: ObjectData? = null //実装依存
     override val className: String = "Global" //実装依存
 
@@ -29,10 +30,12 @@ class GlobalObject: ObjectData() {
 }
 
 class NormalObject: ObjectData() {
+    override val isNative: Boolean = true
     override val prototype: ObjectData = PrototypeObject()
 }
 
 class PrototypeObject: ObjectData() {
+    override val isNative: Boolean = true
     override val prototype: ObjectData? = null
     override val className: String = "Object"
     override val extensible: Boolean = true
@@ -53,6 +56,7 @@ class FunctionObject(
     val strict: Boolean,
     private val globalObj: GlobalObject
 ): ObjectData() {
+    override val isNative: Boolean = true
     override val prototype: ObjectData = FunctionPrototypeObject()
     override val className: String = "Function"
     override fun get(propertyName: String): EcmaData? {
@@ -142,6 +146,7 @@ class FunctionObject(
     }
 
     object ThrowTypeObject: ObjectData() {
+        override val isNative: Boolean = true
         override val className: String = "Function"
         override val prototype: ObjectData = FunctionPrototypeObject()
         override val call: ((EcmaData,List<EcmaData>) -> StackData) = lambda@ { thisValue, arguments ->
@@ -169,6 +174,7 @@ class FunctionObject(
 }
 
 class FunctionPrototypeObject: ObjectData() {
+    override val isNative: Boolean = true
     override val prototype: ObjectData = PrototypeObject()
     override val className: String = "Function"
     override val extensible: Boolean = true
@@ -193,6 +199,7 @@ class ArgumentsObject(
     strict: Boolean,
     private val globalObj: GlobalObject
 ): ObjectData() {
+    override val isNative: Boolean = true
     override val className: String = "Arguments"
     override val prototype: ObjectData = PrototypeObject()
     private var overrideMethods: Boolean = false
@@ -352,6 +359,7 @@ class ArgumentsObject(
 }
 
 class ArrayObject: ObjectData() {
+    override val isNative: Boolean = true
     val isSparse: Boolean
         get() {
             val len = get("length")!!
@@ -448,6 +456,7 @@ class ArrayObject: ObjectData() {
 }
 
 class ArrayPrototypeObject: ObjectData() {
+    override val isNative: Boolean = true
     override val prototype: ObjectData = PrototypeObject()
     override val className: String = "Array"
     override val extensible: Boolean = true

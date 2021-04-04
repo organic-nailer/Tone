@@ -243,7 +243,28 @@ class ToneVirtualMachine {
                     mainStack.addFirst(value.toStack())
                 }
                 ByteCompiler.OpCode.TypeOf -> {
-                    throw NotImplementedError()
+                    val ref = mainStack.removeFirst()
+                    val value = if(ref is ReferenceStackData) {
+                        val data = referencePool[ref.address]
+                        if(data.isUnresolvableReference()) UndefinedData()
+                        else data.base as EcmaData
+                    } else {
+                        getValue(ref)
+                    }
+                    val result = when(value) {
+                        is UndefinedData -> "undefined"
+                        is NullData -> "object"
+                        is BooleanData -> "boolean"
+                        is NumberData -> "number"
+                        is StringData -> "string"
+                        is ObjectData -> {
+                            if(value.call != null) "function"
+                            else if(value.isNative) "object"
+                            else throw NotImplementedError()
+                        }
+                        else -> throw Exception()
+                    }
+                    mainStack.addFirst(StringStackData(result))
                 }
                 ByteCompiler.OpCode.ToNum -> {
                     val expr = mainStack.removeFirst()

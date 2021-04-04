@@ -169,6 +169,7 @@ open class ObjectData: EcmaData() {
     protected val namedProperties
         : MutableMap<String, PropertyDescriptor> = mutableMapOf()
 
+    open val isNative: Boolean = false
     open val prototype: ObjectData? = null
     open val className: String = ""
     open val extensible: Boolean = true
