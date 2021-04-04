@@ -220,7 +220,21 @@ class ToneVirtualMachine {
                         mainStack.addFirst(BooleanStackData(true))
                     }
                     else {
-                        throw NotImplementedError()
+                        val data = referencePool[ref.address]
+                        if(data.isUnresolvableReference()) {
+                            if(data.strict) throw Exception("SyntaxError")
+                            else mainStack.addFirst(BooleanStackData(true))
+                        }
+                        else if(data.isPropertyReference()) {
+                            val result = toObject(data.base as EcmaData).delete(data.referencedName, data.strict)
+                            mainStack.addFirst(BooleanStackData(result))
+                        }
+                        else {
+                            if(data.strict) throw Exception("SyntaxError")
+                            val bindings = data.base as EnvironmentRecords
+                            val result = bindings.deleteBinding(data.referencedName)
+                            mainStack.addFirst(BooleanStackData(result))
+                        }
                     }
                 }
                 ByteCompiler.OpCode.GetValue -> {
